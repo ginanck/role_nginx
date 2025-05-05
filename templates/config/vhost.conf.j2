@@ -1,0 +1,109 @@
+{#- jinja2: lstrip_blocks: true, trim_blocks: true -#}
+# {{ ansible_managed }}
+
+{% if item.enabled %}
+{% if item.resolver is defined %}
+resolver {{ item.resolver }};
+{% endif %}
+
+{% if item.upstreams is defined and item.upstreams | length > 0 %}
+# Upstream definitions for {{ item.name }}
+{% for upstream in item.upstreams %}
+upstream {{ upstream.name }} {
+{% for server in upstream.servers %}
+    server {{ server.address }}{% if server.weight is defined %} weight={{ server.weight }}{% endif %}{% if server.max_fails is defined %} max_fails={{ server.max_fails }}{% endif %}{% if server.fail_timeout is defined %} fail_timeout={{ server.fail_timeout }}{% endif %}{% if server.backup | default(false) %} backup{% endif %}{% if server.down | default(false) %} down{% endif %};
+{% endfor %}
+{% if upstream.lb_method is defined %}
+    {{ upstream.lb_method }};
+{% endif %}
+}
+{% endfor %}
+{% endif %}
+
+# Virtual Host Configuration for {{ item.name }}
+server {
+{% for listen in item.listen %}
+    listen       {% if listen.ip is defined and listen.ip %}{{ listen.ip }}:{% endif %}{{ listen.port }}{% if listen.ssl is defined and listen.ssl %} ssl{% endif %}{% if listen.http2 is defined and listen.http2 %} http2{% endif %}{% if listen.name is defined %} {{ listen.name }}{% endif %};
+{% if listen.ipv6 is defined and listen.ipv6 %}
+    listen       {{ listen.ipv6 }}:{{ listen.port }}{% if listen.ssl is defined and listen.ssl %} ssl{% endif %}{% if listen.http2 is defined and listen.http2 %} http2{% endif %}{% if listen.name is defined %} {{ listen.name }}{% endif %};
+{% endif %}
+{% endfor %}
+
+    server_name  {{ item.server_name }};
+    root         {{ item.root | default('/usr/share/nginx/html') }};
+
+{% if item.access_log is defined %}
+    access_log   {{ item.access_log }};
+{% endif %}
+{% if item.error_log is defined %}
+    error_log    {{ item.error_log }};
+{% endif %}
+{% if item.client_max_body_size is defined %}
+    client_max_body_size {{ item.client_max_body_size }};
+{% endif %}
+
+{% if item.tls is defined and (item.listen | selectattr('ssl', 'defined') | selectattr('ssl') | list | length > 0) %}
+    # SSL/TLS Configuration
+    ssl_certificate             {{ item.tls.ssl_certificate }};
+    ssl_certificate_key         {{ item.tls.ssl_certificate_key }};
+{% if item.tls.ssl_session_cache is defined %}
+    ssl_session_cache           {{ item.tls.ssl_session_cache }};
+{% endif %}
+{% if item.tls.ssl_session_timeout is defined %}
+    ssl_session_timeout         {{ item.tls.ssl_session_timeout }};
+{% endif %}
+{% if item.tls.ssl_ciphers is defined %}
+    ssl_ciphers                 {{ item.tls.ssl_ciphers }};
+{% endif %}
+{% if item.tls.ssl_prefer_server_ciphers is defined %}
+    ssl_prefer_server_ciphers   {{ item.tls.ssl_prefer_server_ciphers }};
+{% endif %}
+{% endif %}
+
+{% if item.locations is defined %}
+{% for location in item.locations %}
+    location {{ location.path }} {
+{% if location.proxy_pass is defined %}
+    {% if location.proxy_pass.startswith('http://') or location.proxy_pass.startswith('https://') %}
+        proxy_pass {{ location.proxy_pass }};
+    {% else %}
+        proxy_pass http://{{ location.proxy_pass }};
+    {% endif %}
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+{% endif %}
+
+{% if location.config is defined %}
+{% for conf in location.config %}
+        {{ conf }}
+{% endfor %}
+{% endif %}
+    }
+
+{% endfor %}
+{% endif %}
+
+{% if item.error_pages is defined %}
+{% for error in item.error_pages %}
+    error_page {% for code in error.codes %}{{ code }}{% if not loop.last %} {% endif %}{% endfor %} {{ error.page }};
+{% if error.location is defined %}
+    location = {{ error.page }} {
+{% for conf in error.location %}
+        {{ conf }}
+
+{% endfor %}
+    }
+{% endif %}
+{% endfor %}
+{% endif %}
+
+{% if item.extra_config is defined %}
+    # Extra configuration
+{% for config_line in item.extra_config %}
+    {{ config_line }}
+{% endfor %}
+{% endif %}
+}
+{% endif %}

@@ -1,0 +1,33 @@
+{#- jinja2: lstrip_blocks: true, trim_blocks: true -#}
+# {{ ansible_managed }}
+
+# For more information on configuration, see:
+#   * Official English Documentation: http://nginx.org/en/docs/
+#   * Official Russian Documentation: http://nginx.org/ru/docs/
+
+user                {{ nginx_service_user }};
+worker_processes    {{ nginx_service_worker_processes }};
+error_log           {{ nginx_service_error_log }};
+pid                 {{ nginx_service_pid }};
+
+# Load dynamic modules. See /usr/share/doc/nginx/README.dynamic.
+include /usr/share/nginx/modules/*.conf;
+
+events {
+    worker_connections {{ nginx_service_worker_connections }};
+}
+
+{% if nginx_service_include_http %}
+# Include HTTP configuration for Default Server/VHost and Static file servers
+include {{ nginx_service_config_path }}/http.conf;
+{% endif %}
+
+{% if nginx_service_include_stream %}
+# Include Stream configuration for TCP/UDP load balancers
+include {{ nginx_service_config_path }}/stream.conf;
+{% endif %}
+
+{% if nginx_static_file_servers %}
+# Include Static file server configurations
+include {{ nginx_service_config_path }}/static.conf;
+{% endif %}

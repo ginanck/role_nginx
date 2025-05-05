@@ -1,0 +1,8 @@
+---
+
+- name: setup nginx on {{ ansible_distribution }} specific tasks
+  include_tasks: "install-{{ ansible_distribution }}.yml"
+  when: ansible_os_family == 'RedHat'
+
+- name: setup nginx on {{ ansible_distribution }} specific tasks
+  include_tasks: cleanup.yml

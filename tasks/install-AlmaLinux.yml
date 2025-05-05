@@ -1,0 +1,97 @@
+---
+
+# Create required directories
+- name: Create Nginx configuration directories
+  ansible.builtin.file:
+    path: "{{ nginx_service_config_path }}/{{ item }}"
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+  loop:
+    - "global"
+    - "default.d"
+    - "conf.d"
+    - "http.d"
+    - "vhost.d"
+    - "stream.d"
+
+# Setup Nginx configurations
+- name: Setup nginx configurations
+  ansible.builtin.template:
+    src: "{{ item }}.conf.j2"
+    dest: "{{ nginx_service_config_path }}/{{ item }}.conf"
+    mode: '0644'
+    owner: root
+    group: root
+  loop:
+    - nginx
+    - http
+    - stream
+    - static
+  loop_control:
+    label: "{{ item }}"
+
+- name: Create default http server configurations
+  ansible.builtin.template:
+    src: config/default.conf.j2
+    dest: "{{ nginx_service_config_path }}/conf.d/default.conf"
+  when:
+    - nginx_default_server is defined
+    - nginx_default_server is iterable
+    - nginx_default_server | selectattr('enabled', 'defined') | selectattr('enabled', 'equalto', true) | list | length > 0
+
+- name: Create vhost configurations
+  ansible.builtin.template:
+    src: config/vhost.conf.j2
+    dest: "{{ nginx_service_config_path }}/vhost.d/vhost_{{ item.name }}.conf"
+  loop: "{{ nginx_vhost_servers | selectattr('enabled', 'equalto', true) }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when:
+    - nginx_vhost_servers is defined
+    - nginx_vhost_servers is iterable
+    - nginx_vhost_servers | selectattr('enabled', 'defined') | selectattr('enabled', 'equalto', true) | list | length > 0
+
+- name: Create static file server configurations
+  ansible.builtin.template:
+    src: config/static.conf.j2
+    dest: "{{ nginx_service_config_path }}/static.d/static_{{ item.name }}.conf"
+  loop: "{{ nginx_static_file_servers | selectattr('enabled', 'equalto', true) }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when:
+    - nginx_static_file_servers is defined
+    - nginx_static_file_servers is iterable
+    - nginx_static_file_servers | selectattr('enabled', 'defined') | selectattr('enabled', 'equalto', true) | list | length > 0
+
+- name: Create http load balancer configurations
+  ansible.builtin.template:
+    src: config/http.conf.j2
+    dest: "{{ nginx_service_config_path }}/http.d/http_{{ item.name }}.conf"
+  loop: "{{ nginx_http_loadbalancers | selectattr('enabled', 'equalto', true) }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when:
+    - nginx_http_loadbalancers is defined
+    - nginx_http_loadbalancers is iterable
+    - nginx_http_loadbalancers | selectattr('enabled', 'defined') | selectattr('enabled', 'equalto', true) | list | length > 0
+
+- name: Create tcp load balancer configurations
+  ansible.builtin.template:
+    src: config/stream.conf.j2
+    dest: "{{ nginx_service_config_path }}/stream.d/stream_{{ item.name }}.conf"
+  loop: "{{ nginx_stream_loadbalancers | selectattr('enabled', 'equalto', true) }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when:
+    - nginx_stream_loadbalancers is defined
+    - nginx_stream_loadbalancers is iterable
+    - nginx_stream_loadbalancers | selectattr('enabled', 'defined') | selectattr('enabled', 'equalto', true) | list | length > 0
+
+# Ensure Nginx service is started and enabled
+- name: Ensure Nginx service is started and enabled
+  ansible.builtin.systemd:
+    name: nginx
+    state: restarted
+    enabled: yes

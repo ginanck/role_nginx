@@ -1,0 +1,96 @@
+{#- jinja2: lstrip_blocks: true, trim_blocks: true -#}
+# {{ ansible_managed }}
+
+{% if item.enabled %}
+# Static File Server Configuration for {{ item.name }}
+server {
+{% for listen in item.listen %}
+    listen       {% if listen.ip is defined and listen.ip %}{{ listen.ip }}:{% endif %}{{ listen.port }}{% if listen.ssl is defined and listen.ssl %} ssl{% endif %}{% if listen.http2 is defined and listen.http2 %} http2{% endif %}{% if listen.name is defined %} {{ listen.name }}{% endif %};
+{% if listen.ipv6 is defined and listen.ipv6 %}
+    listen       {{ listen.ipv6 }}:{{ listen.port }}{% if listen.ssl is defined and listen.ssl %} ssl{% endif %}{% if listen.http2 is defined and listen.http2 %} http2{% endif %}{% if listen.name is defined %} {{ listen.name }}{% endif %};
+{% endif %}
+{% endfor %}
+
+    server_name  {{ item.server_name }};
+    root         {{ item.root }};
+    index        {{ item.index | default('index.html index.htm') }};
+
+{% if item.access_log is defined %}
+    access_log   {{ item.access_log }};
+{% endif %}
+{% if item.error_log is defined %}
+    error_log    {{ item.error_log }};
+{% endif %}
+{% if item.client_max_body_size is defined %}
+    client_max_body_size {{ item.client_max_body_size }};
+{% endif %}
+
+{% if item.tls is defined and (item.listen | selectattr('ssl', 'defined') | selectattr('ssl') | list | length > 0) %}
+    # SSL/TLS Configuration
+    ssl_certificate             {{ item.tls.ssl_certificate }};
+    ssl_certificate_key         {{ item.tls.ssl_certificate_key }};
+{% if item.tls.ssl_session_cache is defined %}
+    ssl_session_cache           {{ item.tls.ssl_session_cache }};
+{% endif %}
+{% if item.tls.ssl_session_timeout is defined %}
+    ssl_session_timeout         {{ item.tls.ssl_session_timeout }};
+{% endif %}
+{% if item.tls.ssl_ciphers is defined %}
+    ssl_ciphers                 {{ item.tls.ssl_ciphers }};
+{% endif %}
+{% if item.tls.ssl_prefer_server_ciphers is defined %}
+    ssl_prefer_server_ciphers   {{ item.tls.ssl_prefer_server_ciphers }};
+{% endif %}
+{% endif %}
+
+{% if item.locations is defined %}
+{% for location in item.locations %}
+    location {{ location.path }} {
+{% if location.alias is defined %}
+        alias {{ location.alias }};
+{% endif %}
+{% if location.try_files is defined %}
+        try_files {{ location.try_files }};
+{% endif %}
+{% if location.autoindex is defined and location.autoindex %}
+        autoindex on;
+{% endif %}
+{% if location.expires is defined %}
+        expires {{ location.expires }};
+{% endif %}
+{% if location.add_headers is defined %}
+{% for header in location.add_headers %}
+        add_header {{ header.name }} {{ header.value }}{% if header.always is defined and header.always %} always{% endif %};
+{% endfor %}
+{% endif %}
+{% if location.config is defined %}
+{% for conf in location.config %}
+        {{ conf }}
+{% endfor %}
+{% endif %}
+    }
+
+{% endfor %}
+{% endif %}
+
+{% if item.error_pages is defined %}
+{% for error in item.error_pages %}
+    error_page {% for code in error.codes %}{{ code }}{% if not loop.last %} {% endif %}{% endfor %} {{ error.page }};
+{% if error.location is defined %}
+    location = {{ error.page }} {
+{% for conf in error.location %}
+        {{ conf }}
+{% endfor %}
+    }
+{% endif %}
+{% endfor %}
+{% endif %}
+
+{% if item.extra_config is defined %}
+    # Extra configuration
+{% for config_line in item.extra_config %}
+    {{ config_line }}
+{% endfor %}
+{% endif %}
+}
+{% endif %}

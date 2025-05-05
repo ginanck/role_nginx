@@ -1,0 +1,58 @@
+---
+
+- name: Cleanup default http server configurations
+  ansible.builtin.file:
+    path: "{{ nginx_service_config_path }}/conf.d/default.conf"
+    state: absent
+  when: 
+    - nginx_default_server is defined
+    - nginx_default_server is iterable
+    - nginx_default_server | selectattr('enabled', 'equalto', true) | length == 0
+
+- name: Cleanup vhost configurations
+  ansible.builtin.file:
+    path: "{{ nginx_service_config_path }}/vhost.d/vhost_{{ item.name }}.conf"
+    state: absent
+  loop: "{{ nginx_vhost_servers | selectattr('enabled', 'equalto', false) | list }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when:
+    - nginx_vhost_servers is defined
+    - nginx_vhost_servers is iterable
+    - nginx_vhost_servers | selectattr('enabled', 'equalto', false)
+
+- name: Cleanup Static file server configurations
+  ansible.builtin.file:
+    path: "{{ nginx_service_config_path }}/static.d/static_{{ item.name }}.conf"
+    state: absent
+  loop: "{{ nginx_static_file_servers | selectattr('enabled', 'equalto', false) | list }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when:
+    - nginx_static_file_servers is defined
+    - nginx_static_file_servers is iterable
+    - nginx_static_file_servers | selectattr('enabled', 'equalto', false)
+
+- name: Cleanup HTTP load balancer configurations
+  ansible.builtin.file:
+    path: "{{ nginx_service_config_path }}/http.d/http_{{ item.name }}.conf"
+    state: absent
+  loop: "{{ nginx_http_loadbalancers | selectattr('enabled', 'equalto', false) | list }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when:
+    - nginx_http_loadbalancers is defined
+    - nginx_http_loadbalancers is iterable
+    - nginx_http_loadbalancers | selectattr('enabled', 'equalto', false)
+
+- name: Cleanup TCP load balancer configurations
+  ansible.builtin.file:
+    path: "{{ nginx_service_config_path }}/stream.d/stream_{{ item.name }}.conf"
+    state: absent
+  loop: "{{ nginx_stream_loadbalancers | selectattr('enabled', 'equalto', false) | list }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when:
+    - nginx_stream_loadbalancers is defined
+    - nginx_stream_loadbalancers is iterable
+    - nginx_stream_loadbalancers | selectattr('enabled', 'equalto', false)

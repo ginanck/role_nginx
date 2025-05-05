@@ -1,0 +1,86 @@
+{#- jinja2: lstrip_blocks: true, trim_blocks: true -#}
+# {{ ansible_managed }}
+
+{% if item.enabled %}
+# HTTP Load Balancers Configuration
+
+{% if item.enabled %}
+# Load Balancer: {{ item.name }}
+upstream {{ item.name }} {
+{% for server in item.upstream_servers %}
+  server {{ server.address }}{% if server.weight is defined %} weight={{ server.weight }}{% endif %}{% if server.max_fails is defined %} max_fails={{ server.max_fails }}{% endif %}{% if server.fail_timeout is defined %} fail_timeout={{ server.fail_timeout }}{% endif %}{% if server.backup | default(false) %} backup{% endif %}{% if server.down | default(false) %} down{% endif %};
+{% endfor %}
+
+{%- if item.lb_method is defined %}
+  {{ item.lb_method }};
+{% endif %}
+{% if item.keepalive is defined %}
+  keepalive {{ item.keepalive }};
+{% endif %}
+}
+
+server {
+{% for listen_config in item.listen %}
+  listen {% if listen_config.ip | length > 0 %}{{ listen_config.ip }}:{% endif %}{{ listen_config.port }}{% if listen_config.ssl | default(false) %} ssl{% endif %}{% if listen_config.http2 | default(false) %} http2{% endif %}{% if listen_config.name | default('') == 'default_server' %} default_server{% endif %};
+{% if listen_config.ipv6 is defined and listen_config.ipv6 %}
+  listen {{ listen_config.ipv6 }}:{{ listen_config.port }}{% if listen_config.ssl | default(false) %} ssl{% endif %}{% if listen_config.http2 | default(false) %} http2{% endif %}{% if listen_config.name | default('') == 'default_server' %} default_server{% endif %};
+{% endif %}
+{% endfor %}
+
+  server_name {{ item.server_name | default('_') }};
+{% if item.access_log is defined %}
+  access_log {{ item.access_log | default(nginx_httpd_access_log) }};
+{% endif %}
+{% if item.error_log is defined %}
+  error_log {{ item.error_log | default(nginx_httpd_error_log) }};
+{% endif %}
+{% if item.client_max_body_size is defined %}
+  client_max_body_size {{ item.client_max_body_size }};
+{% endif %}
+
+{% if item.tls is defined and (item.listen | selectattr('ssl', 'defined') | selectattr('ssl') | list | length > 0) %}
+  # SSL/TLS Configuration
+{% for key, value in item.tls.items() %}
+  {{ key }} {{ value }};
+{% endfor %}
+{% endif %}
+
+{% if item.locations is defined %}
+{% for location in item.locations %}
+  location {{ location.path }} {
+{% if location.proxy_pass is defined %}
+    proxy_pass http://{{ location.proxy_pass }};
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+
+{% if item.proxy_connect_timeout is defined %}
+    proxy_connect_timeout {{ item.proxy_connect_timeout }};
+{% endif %}
+{% if item.proxy_send_timeout is defined %}
+    proxy_send_timeout {{ item.proxy_send_timeout }};
+{% endif %}
+{% if item.proxy_read_timeout is defined %}
+    proxy_read_timeout {{ item.proxy_read_timeout }};
+{% endif %}
+{% endif %}
+
+{% if location.config is defined and location.config | length > 0 %}
+{% for config_line in location.config %}
+    {{ config_line }}
+{% endfor %}
+{% endif %}
+  }
+
+{% endfor %}
+{% endif %}
+
+{%- if item.error_pages is defined %}
+{% for error_page in item.error_pages %}
+  error_page {% for code in error_page.codes %}{{ code }}{% if not loop.last %} {% endif %}{% endfor %} {{ error_page.page }};
+{% endfor %}
+{% endif %}
+}
+{% endif %}
+{% endif %}

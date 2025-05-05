@@ -1,0 +1,17 @@
+{#- jinja2: lstrip_blocks: true, trim_blocks: true -#}
+# {{ ansible_managed }}
+
+stream {
+{% for format_name, format_lines in nginx_stream_log_format.items() %}
+    log_format  {{ format_name }}  '{{ format_lines[0] }}'
+{% for line in format_lines[1:] %}
+                      '{{ line }}'
+{% endfor %}                      ;
+{% endfor %}
+
+    access_log {{ nginx_stream_access_log }} {{ nginx_stream_log_format.keys() | first }};
+    error_log {{ nginx_stream_error_log }};
+
+    # TCP Load Balancer configurations
+    include {{ nginx_service_config_path }}/stream.d/*.conf;
+}

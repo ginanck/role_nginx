@@ -1,0 +1,46 @@
+{#- jinja2: lstrip_blocks: true, trim_blocks: true -#}
+# {{ ansible_managed }}
+
+{% if item.enabled %}
+# Upstream configuration for {{ item.name }}
+upstream {{ item.name }}_upstream {
+{% for server in item.upstream_servers %}
+    server {{ server.address }}{% if server.weight is defined %} weight={{ server.weight }}{% endif %}{% if server.max_fails is defined %} max_fails={{ server.max_fails }}{% endif %}{% if server.fail_timeout is defined %} fail_timeout={{ server.fail_timeout }}{% endif %}{% if server.backup | default(false) %} backup{% endif %};
+{% endfor %}
+}
+
+# Server configuration for {{ item.name }}
+server {
+{% for listen_block in item.listen %}
+    listen {% if listen_block.ip is defined and listen_block.ip %}{{ listen_block.ip }}:{% endif %}{{ listen_block.port }}{% if listen_block.ssl | default(false) %} ssl{% endif %}{% if listen_block.udp | default(false) %} udp{% endif %}{% if listen_block.proxy_protocol | default(false) %} proxy_protocol{% endif %};
+{% if listen_block.ipv6 is defined and listen_block.ipv6 %}
+    listen {{ listen_block.ipv6 }}:{{ listen_block.port }}{% if listen_block.ssl | default(false) %} ssl{% endif %}{% if listen_block.udp | default(false) %} udp{% endif %}{% if listen_block.proxy_protocol | default(false) %} proxy_protocol{% endif %};
+{% endif %}
+{% endfor %}
+
+{% if item.ssl is defined %}
+    ssl_certificate {{ item.tls.ssl_certificate }};
+    ssl_certificate_key {{ item.tls.ssl_certificate_key }};
+{% if item.tls.ssl_session_cache is defined %}
+    ssl_session_cache {{ item.tls.ssl_session_cache }};
+{% endif %}
+{% if item.tls.ssl_session_timeout is defined %}
+    ssl_session_timeout {{ item.tls.ssl_session_timeout }};
+{% endif %}
+{% if item.tls.ssl_ciphers is defined %}
+    ssl_ciphers {{ item.tls.ssl_ciphers }};
+{% endif %}
+{% if item.tls.ssl_prefer_server_ciphers | default(false) %}
+    ssl_prefer_server_ciphers on;
+{% endif %}
+{% endif %}
+
+    proxy_pass {{ item.name }}_upstream;
+{% if item.proxy_timeout is defined %}
+    proxy_timeout {{ item.proxy_timeout }};
+{% endif %}
+{% if item.proxy_connect_timeout is defined %}
+    proxy_connect_timeout {{ item.proxy_connect_timeout }};
+{% endif %}
+}
+{% endif %}
