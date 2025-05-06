@@ -343,7 +343,6 @@ nginx_static_file_servers:
         autoindex: true
         config:
           - "gzip_static on;"
-          - "add_header Content-Disposition 'attachment';"
 
       - path: "/assets"
         config:
