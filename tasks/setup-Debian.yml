@@ -1,7 +1,7 @@
 ---
 
 - name: Install Nginx package
-  ansible.builtin.yum:
+  ansible.builtin.apt:
     name: "{{ nginx_service_packages }}"
     state: present
     update_cache: yes
