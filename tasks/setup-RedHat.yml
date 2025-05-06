@@ -1,6 +1,10 @@
 ---
 
-# Create required directories
+- name: Install Nginx package
+  ansible.builtin.yum:
+    name: "{{ nginx_service_packages }}"
+    state: present
+
 - name: Create Nginx configuration directories
   ansible.builtin.file:
     path: "{{ nginx_service_config_path }}/{{ item }}"
@@ -16,7 +20,6 @@
     - "vhost.d"
     - "stream.d"
 
-# Setup Nginx configurations
 - name: Setup nginx configurations
   ansible.builtin.template:
     src: "{{ item }}.conf.j2"
@@ -37,9 +40,9 @@
     src: config/default.conf.j2
     dest: "{{ nginx_service_config_path }}/conf.d/default.conf"
   when:
-    - nginx_default_server is defined
-    - nginx_default_server is iterable
-    - nginx_default_server | selectattr('enabled', 'defined') | selectattr('enabled', 'equalto', true) | list | length > 0
+    - nginx_default_server is defined and nginx_default_server is iterable and nginx_default_server | selectattr('enabled', 'defined') | selectattr('enabled', 'equalto', true) | list | length > 0
+  notify: 
+    - reload nginx
 
 - name: Create vhost configurations
   ansible.builtin.template:
@@ -49,9 +52,9 @@
   loop_control:
     label: "{{ item.name }}"
   when:
-    - nginx_vhost_servers is defined
-    - nginx_vhost_servers is iterable
-    - nginx_vhost_servers | selectattr('enabled', 'defined') | selectattr('enabled', 'equalto', true) | list | length > 0
+    - nginx_vhost_servers is defined and nginx_vhost_servers is iterable and nginx_vhost_servers | selectattr('enabled', 'defined') | selectattr('enabled', 'equalto', true) | list | length > 0
+  notify: 
+    - reload nginx
 
 - name: Create static file server configurations
   ansible.builtin.template:
@@ -61,9 +64,9 @@
   loop_control:
     label: "{{ item.name }}"
   when:
-    - nginx_static_file_servers is defined
-    - nginx_static_file_servers is iterable
-    - nginx_static_file_servers | selectattr('enabled', 'defined') | selectattr('enabled', 'equalto', true) | list | length > 0
+    - nginx_static_file_servers is defined and nginx_static_file_servers is iterable and nginx_static_file_servers | selectattr('enabled', 'defined') | selectattr('enabled', 'equalto', true) | list | length > 0
+  notify: 
+    - reload nginx
 
 - name: Create http load balancer configurations
   ansible.builtin.template:
@@ -73,9 +76,9 @@
   loop_control:
     label: "{{ item.name }}"
   when:
-    - nginx_http_loadbalancers is defined
-    - nginx_http_loadbalancers is iterable
-    - nginx_http_loadbalancers | selectattr('enabled', 'defined') | selectattr('enabled', 'equalto', true) | list | length > 0
+    - nginx_http_loadbalancers is defined and nginx_http_loadbalancers is iterable and nginx_http_loadbalancers | selectattr('enabled', 'defined') | selectattr('enabled', 'equalto', true) | list | length > 0
+  notify: 
+    - reload nginx
 
 - name: Create tcp load balancer configurations
   ansible.builtin.template:
@@ -85,13 +88,14 @@
   loop_control:
     label: "{{ item.name }}"
   when:
-    - nginx_stream_loadbalancers is defined
-    - nginx_stream_loadbalancers is iterable
-    - nginx_stream_loadbalancers | selectattr('enabled', 'defined') | selectattr('enabled', 'equalto', true) | list | length > 0
+    - nginx_stream_loadbalancers is defined and nginx_stream_loadbalancers is iterable and nginx_stream_loadbalancers | selectattr('enabled', 'defined') | selectattr('enabled', 'equalto', true) | list | length > 0
+  notify: 
+    - reload nginx
 
-# Ensure Nginx service is started and enabled
 - name: Ensure Nginx service is started and enabled
   ansible.builtin.systemd:
     name: nginx
-    state: restarted
+    state: started
     enabled: yes
+  notify: 
+    - reload nginx

@@ -1,8 +1,13 @@
 ---
 
-- name: setup nginx on {{ ansible_distribution }} specific tasks
-  include_tasks: "install-{{ ansible_distribution }}.yml"
-  when: ansible_os_family == 'RedHat'
+- name: setup sysctl configuration
+  include_tasks: setup-sysctl.yml
+  when:
+    - nginx_sysctl_parameters is defined
+    - nginx_sysctl_parameters is iterable
+
+- name: setup nginx on {{ ansible_os_family }} specific tasks
+  include_tasks: "setup-{{ ansible_os_family }}.yml"
 
 - name: setup nginx on {{ ansible_distribution }} specific tasks
-  include_tasks: cleanup.yml
+  include_tasks: "remove-{{ ansible_os_family }}.yml"

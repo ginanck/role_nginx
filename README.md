@@ -1,38 +1,414 @@
-Role Name
-=========
+# Ansible Role: Nginx
 
-A brief description of the role goes here.
+This role installs and configures Nginx for various use cases including default servers, virtual hosts, HTTP load balancers, stream load balancers, and static file servers.
 
-Requirements
-------------
+## Requirements
 
-Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
+- Ansible 2.9+
+- A supported operating system
+  - Debian OS Family
+  - RHEL OS Family
 
-Role Variables
---------------
+## Role Variables
 
-A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
+### General Nginx Configuration
 
-Dependencies
-------------
+```yaml
+nginx_service_packages:
+  - nginx
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
+nginx_service_user: nginx
+nginx_service_name: nginx
+nginx_service_pid: /run/nginx.pid
 
-Example Playbook
-----------------
+nginx_service_config_path: /etc/nginx
 
-Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
+nginx_service_worker_processes: auto
+nginx_service_worker_connections: 1024
+nginx_service_worker_rlimit_nofile: 4096
+nginx_service_error_log: /var/log/nginx/error.log
 
-    - hosts: servers
-      roles:
-         - { role: username.rolename, x: 42 }
+nginx_service_sendfile: "on"
+nginx_service_tcp_nopush: "on"
+nginx_service_tcp_nodelay: "on"
+nginx_service_keepalive_timeout: 65
+nginx_service_types_hash_max_size: 2048
+nginx_service_include_mime_type: "{{ nginx_service_config_path }}/mime.types"
+nginx_service_default_type: application/octet-stream
+nginx_service_include_http: true
+nginx_service_include_stream: true
 
-License
--------
+nginx_ssl_session_cache_http: "shared:HTTPSSLCache:10m"
+nginx_ssl_session_cache_stream: "shared:StreamSSLCache:10m"
+
+nginx_sysctl_conf_file: "99-nginx.conf"
+nginx_sysctl_parameters:
+  - name: net.ipv4.ip_forward
+    value: 1
+  - name: net.ipv6.conf.all.forwarding
+    value: 1
+  - name: net.bridge.bridge-nf-call-iptables
+    value: 1
+  - name: net.bridge.bridge-nf-call-ip6tables
+    value: 1
+  - name: vm.swappiness
+    value: 0
+```
+
+### Default Server Configuration
+
+```yaml
+nginx_default_server:
+  - name: "http"
+    enabled: false
+    listen:
+      - name: default_server
+        ip: ""
+        ipv6: "[::]"
+        port: 80
+    server_name: "_"
+    root: "/usr/share/nginx/html"
+    locations:
+      - path: "/"
+        config: []
+    error_pages:
+      - page: "/404.html"
+        codes: [404]
+      - page: "/50x.html"
+        codes: [500, 502, 503, 504]
+
+  - name: "https"
+    enabled: false
+    listen:
+      - name: default_server
+        ip: ""
+        ipv6: "[::]"
+        port: 443
+        ssl: true
+        http2: true
+    server_name: "_"
+    root: "/usr/share/nginx/html"
+    locations:
+      - path: "/"
+        config: []
+    error_pages:
+      - page: "/404.html"
+        codes: [404]
+      - page: "/50x.html"
+        codes: [500, 502, 503, 504]
+    tls:
+      ssl_certificate: "/etc/pki/nginx/server.crt"
+      ssl_certificate_key: "/etc/pki/nginx/private/server.key"
+      ssl_session_cache: "{{ nginx_ssl_session_cache_http }}"
+      ssl_session_timeout: "10m"
+      ssl_ciphers: "PROFILE=SYSTEM"
+      ssl_prefer_server_ciphers: "on"
+```
+
+### HTTP Load Balancer Configuration
+
+```yaml
+nginx_http_loadbalancers:
+  - name: "webapp"
+    enabled: false
+    lb_method: "least_conn"
+    listen:
+      - name: "webapp_server"
+        ip: ""
+        ipv6: "[::]"
+        port: 80
+    server_name: "webapp.example.com"
+    keepalive: 32
+    upstream_servers:
+      - address: "10.0.0.1:8080"
+      - address: "10.0.0.2:8080"
+        weight: 2
+        max_fails: 3
+        fail_timeout: "30s"
+        backup: false
+    proxy_connect_timeout: "5s"
+    proxy_read_timeout: "60s"
+    proxy_send_timeout: "60s"
+    client_max_body_size: "10m"
+    locations:
+      - path: "/"
+        proxy_pass: "webapp"
+        config: []
+      - path: "/static"
+        config:
+          - "alias /var/www/static;"
+          - "expires 30d;"
+    error_pages:
+      - page: "/404.html"
+        codes: [404]
+      - page: "/50x.html"
+        codes: [500, 502, 503, 504]
+
+  - name: "secure_api"
+    enabled: false
+    lb_method: "least_conn"
+    listen:
+      - name: "api_server"
+        ip: ""
+        ipv6: "[::]"
+        port: 443
+        ssl: true
+        http2: true
+    server_name: "api.example.com"
+    upstream_servers:
+      - address: "10.0.0.3:8443"
+      - address: "10.0.0.4:8443"
+        weight: 1
+    locations:
+      - path: "/"
+        proxy_pass: "secure_api"
+        config: []
+      - path: "/docs"
+        config:
+          - "root /var/www/api-docs;"
+          - "index index.html;"
+    tls:
+      ssl_certificate: "/etc/pki/nginx/server.crt"
+      ssl_certificate_key: "/etc/pki/nginx/private/server.key"
+      ssl_session_cache: "{{ nginx_ssl_session_cache_http }}"
+      ssl_session_timeout: "10m"
+      ssl_ciphers: "PROFILE=SYSTEM"
+      ssl_prefer_server_ciphers: "on"
+```
+
+### Stream Load Balancer Configuration
+
+```yaml
+nginx_stream_loadbalancers:
+  - name: "mysql"
+    enabled: false
+    lb_method: hash
+    listen:
+      - name: "mysql_server"
+        ip: ""
+        ipv6: "[::]"
+        port: 3306
+    upstream_servers:
+      - address: "10.0.0.1:3306"
+      - address: "10.0.0.2:3306"
+        weight: 2
+        max_fails: 3
+        fail_timeout: "30s"
+        backup: false
+    proxy_timeout: "60s"
+    proxy_connect_timeout: "5s"
+
+  - name: "secure_postgres"
+    enabled: false
+    lb_method: hash
+    listen:
+      - name: "postgres_server"
+        ip: ""
+        ipv6: "[::]"
+        port: 5432
+        ssl: true
+    upstream_servers:
+      - address: "10.0.0.3:5432"
+      - address: "10.0.0.4:5432"
+        weight: 1
+    proxy_timeout: "60s"
+    ssl: true
+    tls:
+      ssl_certificate: "/etc/pki/nginx/server.crt"
+      ssl_certificate_key: "/etc/pki/nginx/private/server.key"
+      ssl_session_cache: "{{ nginx_ssl_session_cache_stream }}"
+      ssl_session_timeout: "10m"
+      ssl_ciphers: "PROFILE=SYSTEM"
+      ssl_prefer_server_ciphers: true
+```
+
+### Virtual Host Configuration
+
+```yaml
+nginx_vhost_servers:
+  - name: "example"                      # Required: Unique name for the virtual host
+    enabled: false                        # Required: Whether this vhost is enabled
+    server_name: "example.com www.example.com"  # Required: Server name(s)
+    root: "/var/www/example"             # Optional: Document root (defaults to /usr/share/nginx/html)
+    # resolver: "8.8.8.8 valid=30s"        # Use Google's DNS or your local DNS server
+
+    # Upstream definitions specific to this vhost
+    upstreams:
+      - name: "api_backend"
+        lb_method: "least_conn"
+        servers:
+          - address: "172.16.2.61:8080"
+            weight: 1
+
+    # Listen directives - at least one is required
+    listen:
+      - name: "default_server"           # Optional: Additional listen parameters (e.g., default_server)
+        port: 9080                       # Required: Port to listen on
+        ip: ""                           # Optional: IP address to bind to (empty for all)
+        ipv6: "[::]"                     # Optional: IPv6 address to bind to
+      - name: "default_server"
+        port: 9443                       # Example SSL configuration
+        ip: ""
+        ipv6: "[::]"
+        ssl: true                        # Enable SSL for this listen directive
+        http2: true                      # Enable HTTP/2 for this listen directive
+
+    # TLS configuration (required if any listen directive has ssl: true)
+    tls:
+      ssl_certificate: "/etc/pki/nginx/server.crt"
+      ssl_certificate_key: "/etc/pki/nginx/private/server.key"
+      ssl_session_cache: "{{ nginx_ssl_session_cache_http }}"
+      ssl_session_timeout: "10m"
+      ssl_ciphers: "PROFILE=SYSTEM"
+      ssl_prefer_server_ciphers: "on"
+
+    # Optional: Access and error logs
+    access_log: "/var/log/nginx/example_access.log"
+    error_log: "/var/log/nginx/example_error.log"
+
+    # Optional: Client max body size
+    client_max_body_size: "1m"
+
+    # Location blocks
+    locations:
+      - path: "/"
+        config:
+          - "index index.html index.htm;"
+          - "try_files $uri $uri/ =404;"
+
+      - path: "/api"
+        proxy_pass: "api_backend"  # Reference to the upstream defined above
+        config:
+          - "proxy_connect_timeout 60s;"
+          - "proxy_read_timeout 60s;"
+
+      - path: "~ \\.php$"
+        config:
+          - "fastcgi_pass unix:/var/run/php-fpm/www.sock;"
+          - "fastcgi_index index.php;"
+          - "fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;"
+          - "include fastcgi_params;"
+
+    # Error pages
+    error_pages:
+      - codes: [404]
+        page: "/404.html"
+        location:
+          - "internal;"
+
+      - codes: [500, 502, 503, 504]
+        page: "/50x.html"
+        location:
+          - "internal;"
+
+    # Optional: Additional configuration lines
+    extra_config:
+      - "add_header X-Frame-Options SAMEORIGIN;"
+      - "add_header X-Content-Type-Options nosniff;"
+      - "add_header X-XSS-Protection \"1; mode=block\";"
+
+  # Example of a second virtual host (minimal configuration)
+  - name: "minimal"
+    enabled: false
+    server_name: "minimal.example.com"
+    listen:
+      - port: 80
+    locations:
+      - path: "/"
+        config:
+          - "index index.html;"
+```
+
+### Static File Server Configuration
+
+```yaml
+nginx_static_file_servers:
+  - name: "web_files"
+    enabled: false
+    listen:
+      - port: 80
+        ip: ""  # Empty string for all IPs
+        name: "default_server"  # Optional: default_server, etc.
+      - port: 443
+        ssl: true
+        http2: true
+        ip: ""
+    server_name: "static.example.com"
+    root: "/var/www/static"
+    index: "index.html index.htm"
+    access_log: "/var/log/nginx/static_access.log"
+    error_log: "/var/log/nginx/static_error.log"
+    client_max_body_size: "10M"
+
+    # SSL/TLS configuration (if needed)
+    tls:
+      ssl_certificate: "/etc/nginx/ssl/static.crt"
+      ssl_certificate_key: "/etc/nginx/ssl/static.key"
+      ssl_session_cache: "shared:SSL:10m"
+      ssl_session_timeout: "10m"
+      ssl_ciphers: "HIGH:!aNULL:!MD5"
+      ssl_prefer_server_ciphers: "on"
+
+    # Location blocks
+    locations:
+      - path: "/"
+        try_files: "$uri $uri/ =404"
+        expires: "30d"
+        add_headers:
+          - name: "Cache-Control"
+            value: "public"
+          - name: "X-Content-Type-Options"
+            value: "nosniff"
+            always: true
+
+      - path: "/downloads"
+        alias: "/var/www/downloads"
+        autoindex: true
+        config:
+          - "gzip_static on;"
+
+      - path: "/assets"
+        config:
+          - "access_log off;"
+          - "expires max;"
+          - "add_header Cache-Control public;"
+
+    # Error pages
+    error_pages:
+      - codes: [404]
+        page: "/404.html"
+      - codes: [500, 502, 503, 504]
+        page: "/50x.html"
+        location:
+          - "root /usr/share/nginx/html;"
+          - "internal;"
+
+    # Any additional configuration
+    extra_config:
+      - "gzip on;"
+      - "gzip_types text/plain text/css application/javascript image/svg+xml;"
+```
+
+## Dependencies
+
+None.
+
+## Example Playbook
+
+```yaml
+- name: Install and configure Nginx
+  hosts: all
+  become: true
+  become_method: sudo
+  gather_facts: true
+  roles:
+    - role_nginx
+```
+
+## License
 
 BSD
 
-Author Information
-------------------
+## Author Information
 
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).
+DevOps is alive!

@@ -17,9 +17,7 @@
   loop_control:
     label: "{{ item.name }}"
   when:
-    - nginx_vhost_servers is defined
-    - nginx_vhost_servers is iterable
-    - nginx_vhost_servers | selectattr('enabled', 'equalto', false)
+    - nginx_vhost_servers is defined and nginx_vhost_servers is iterable and nginx_vhost_servers | selectattr('enabled', 'equalto', false)
 
 - name: Cleanup Static file server configurations
   ansible.builtin.file:
@@ -29,9 +27,7 @@
   loop_control:
     label: "{{ item.name }}"
   when:
-    - nginx_static_file_servers is defined
-    - nginx_static_file_servers is iterable
-    - nginx_static_file_servers | selectattr('enabled', 'equalto', false)
+    - nginx_static_file_servers is defined and nginx_static_file_servers is iterable and nginx_static_file_servers | selectattr('enabled', 'equalto', false)
 
 - name: Cleanup HTTP load balancer configurations
   ansible.builtin.file:
@@ -41,9 +37,7 @@
   loop_control:
     label: "{{ item.name }}"
   when:
-    - nginx_http_loadbalancers is defined
-    - nginx_http_loadbalancers is iterable
-    - nginx_http_loadbalancers | selectattr('enabled', 'equalto', false)
+    - nginx_http_loadbalancers is defined and nginx_http_loadbalancers is iterable and nginx_http_loadbalancers | selectattr('enabled', 'equalto', false)
 
 - name: Cleanup TCP load balancer configurations
   ansible.builtin.file:
@@ -53,6 +47,4 @@
   loop_control:
     label: "{{ item.name }}"
   when:
-    - nginx_stream_loadbalancers is defined
-    - nginx_stream_loadbalancers is iterable
-    - nginx_stream_loadbalancers | selectattr('enabled', 'equalto', false)
+    - nginx_stream_loadbalancers is defined and nginx_stream_loadbalancers is iterable and nginx_stream_loadbalancers | selectattr('enabled', 'equalto', false)
