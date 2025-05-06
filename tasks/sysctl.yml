@@ -10,7 +10,5 @@
   register: sysctl_config
 
 - name: Apply sysctl parameters
-  ansible.posix.sysctl:
-    sysctl_file: "/etc/sysctl.d/{{ nginx_sysctl_conf_file }}"
-    reload: true
+  ansible.builtin.command: "sysctl -p /etc/sysctl.d/{{ nginx_sysctl_conf_file }}"
   when: sysctl_config.changed
