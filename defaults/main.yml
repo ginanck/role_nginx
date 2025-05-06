@@ -333,7 +333,7 @@ nginx_static_file_servers:
         expires: "30d"
         add_headers:
           - name: "Cache-Control"
-            value: "public, max-age=2592000"
+            value: "public"
           - name: "X-Content-Type-Options"
             value: "nosniff"
             always: true
