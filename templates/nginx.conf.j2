@@ -26,8 +26,3 @@ include {{ nginx_service_config_path }}/http.conf;
 # Include Stream configuration for TCP/UDP load balancers
 include {{ nginx_service_config_path }}/stream.conf;
 {% endif %}
-
-{% if nginx_static_file_servers %}
-# Include Static file server configurations
-include {{ nginx_service_config_path }}/static.conf;
-{% endif %}

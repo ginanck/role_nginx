@@ -4,6 +4,18 @@
 {% if item.enabled %}
 # Upstream configuration for {{ item.name }}
 upstream {{ item.name }}_upstream {
+{% if item.lb_method is defined %}
+{% if item.lb_method == 'hash' %}
+    hash $remote_addr consistent;
+{% elif item.lb_method == 'least_conn' %}
+    least_conn;
+{% elif item.lb_method == 'ip_hash' %}
+    # Note: ip_hash is not directly available in stream module, using hash instead
+    hash $remote_addr consistent;
+{% elif item.lb_method == 'random' %}
+    random;
+{% endif %}
+{% endif %}
 {% for server in item.upstream_servers %}
     server {{ server.address }}{% if server.weight is defined %} weight={{ server.weight }}{% endif %}{% if server.max_fails is defined %} max_fails={{ server.max_fails }}{% endif %}{% if server.fail_timeout is defined %} fail_timeout={{ server.fail_timeout }}{% endif %}{% if server.backup | default(false) %} backup{% endif %};
 {% endfor %}

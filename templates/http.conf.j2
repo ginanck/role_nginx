@@ -32,4 +32,9 @@ http {
     # HTTP Load Balancer configurations
     include {{ nginx_service_config_path }}/http.d/*.conf;
 {% endif %}
+
+{% if nginx_static_file_servers %}
+    # Include Static file server configurations
+    include {{ nginx_service_config_path }}/static.conf;
+{% endif %}
 }

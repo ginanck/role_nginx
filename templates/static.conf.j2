@@ -1,27 +1,17 @@
 {#- jinja2: lstrip_blocks: true, trim_blocks: true -#}
 # {{ ansible_managed }}
 
-http {
-{% for format_name, format_lines in nginx_httpd_log_format.items() %}
-    log_format  {{ format_name }}  '{{ format_lines[0] }}'
+{% for format_name, format_lines in nginx_static_log_format.items() %}
+log_format  {{ format_name }}  '{{ format_lines[0] }}'
 {% for line in format_lines[1:] %}
-                      '{{ line }}'
+                    '{{ line }}'
 {% endfor %}                      ;
 {% endfor %}
 
-    access_log  {{ nginx_httpd_access_log }}  {{ nginx_httpd_log_format.keys() | first }};
-    error_log   {{ nginx_httpd_error_log }};
-
-    sendfile            {{ nginx_service_sendfile }};
-    tcp_nopush          {{ nginx_service_tcp_nopush }};
-    tcp_nodelay         {{ nginx_service_tcp_nodelay }};
-    keepalive_timeout   {{ nginx_service_keepalive_timeout }};
-    types_hash_max_size {{ nginx_service_types_hash_max_size }};
-    include             {{ nginx_service_include_mime_type }};
-    default_type        {{ nginx_service_default_type }};
+access_log  {{ nginx_static_access_log }}  {{ nginx_static_log_format.keys() | first }};
+error_log   {{ nginx_static_error_log }};
 
 {% if nginx_static_file_servers %}
-    # Static file server configurations
-    include {{ nginx_service_config_path }}/static.d/*.conf;
+# Static file server configurations
+include {{ nginx_service_config_path }}/static.d/*.conf;
 {% endif %}
-}

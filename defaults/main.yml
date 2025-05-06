@@ -84,13 +84,13 @@ nginx_default_server:
 nginx_http_loadbalancers:
   - name: "webapp"
     enabled: false
+    lb_method: "least_conn"
     listen:
       - name: "webapp_server"
         ip: ""
         ipv6: "[::]"
         port: 80
     server_name: "webapp.example.com"
-    lb_method: "least_conn"
     keepalive: 32
     upstream_servers:
       - address: "10.0.0.1:8080"
@@ -119,6 +119,7 @@ nginx_http_loadbalancers:
 
   - name: "secure_api"
     enabled: false
+    lb_method: "least_conn"
     listen:
       - name: "api_server"
         ip: ""
@@ -158,6 +159,7 @@ nginx_stream_log_format:
 nginx_stream_loadbalancers:
   - name: "mysql"
     enabled: false
+    lb_method: hash
     listen:
       - name: "mysql_server"
         ip: ""
@@ -175,6 +177,7 @@ nginx_stream_loadbalancers:
 
   - name: "secure_postgres"
     enabled: false
+    lb_method: hash
     listen:
       - name: "postgres_server"
         ip: ""
@@ -205,10 +208,10 @@ nginx_vhost_servers:
     # Upstream definitions specific to this vhost
     upstreams:
       - name: "api_backend"
+        lb_method: "least_conn"
         servers:
           - address: "172.16.2.61:8080"
             weight: 1
-        lb_method: "least_conn"
 
     # Listen directives - at least one is required
     listen:
@@ -287,6 +290,14 @@ nginx_vhost_servers:
       - path: "/"
         config:
           - "index index.html;"
+
+nginx_static_access_log: "/var/log/nginx/static_access.log"
+nginx_static_error_log: "/var/log/nginx/static_error.log"
+nginx_static_log_format:
+  static:
+    - '$remote_addr - $remote_user [$time_local] "$request" '
+    - '$status $body_bytes_sent "$http_referer" '
+    - '"$http_user_agent" "$http_x_forwarded_for"'
 
 nginx_static_file_servers:
   - name: "web_files"
