@@ -5,3 +5,5 @@
     name: "{{ nginx_service_packages }}"
     state: present
     update_cache: yes
+  notify: 
+    - start nginx

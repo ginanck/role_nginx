@@ -1,10 +1,19 @@
 ---
+
+- name: start nginx
+  ansible.builtin.service:
+    name: nginx
+    state: started
+    enabled: yes
+
 - name: restart nginx
-  service:
+  ansible.builtin.service:
     name: nginx
     state: restarted
+    enabled: yes
 
 - name: reload nginx
-  service:
+  ansible.builtin.service:
     name: nginx
     state: reloaded
+    enabled: yes

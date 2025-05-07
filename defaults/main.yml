@@ -8,6 +8,8 @@ nginx_service_name: nginx
 nginx_service_pid: /run/nginx.pid
 
 nginx_service_config_path: /etc/nginx
+nginx_service_root_path: /var/www/html
+nginx_service_ssl_path: /opt/nginx/ssl
 
 nginx_service_worker_processes: auto
 nginx_service_worker_connections: 1024

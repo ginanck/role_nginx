@@ -1,0 +1,33 @@
+---
+
+- name: Create HTTP configuration directories
+  ansible.builtin.include_tasks: create-dirs-config.yml
+  vars:
+    directory_type: "static configuration directory"
+  loop:
+    - "static.d"
+
+- name: Create HTTP configuration directories
+  ansible.builtin.include_tasks: create-dirs-root.yml
+  vars:
+    directory_type: "static file directory"
+  loop:
+    - "static"
+
+- name: Create HTTP SSL directories
+  ansible.builtin.include_tasks: create-dirs-ssl.yml
+  vars:
+    directory_type: "ssl directory"
+  loop:
+    - "static"
+
+- name: Create static file server configurations
+  ansible.builtin.template:
+    src: config/static.conf.j2
+    dest: "{{ nginx_service_config_path }}/static.d/static_{{ item.name }}.conf"
+    mode: '0644'
+    owner: root
+    group: root
+  loop: "{{ nginx_static_file_servers | selectattr('enabled', 'equalto', true) }}"
+  loop_control:
+    label: "{{ item.name }}"

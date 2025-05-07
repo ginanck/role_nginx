@@ -1,0 +1,24 @@
+---
+
+- name: Create HTTP configuration directories
+  ansible.builtin.include_tasks: create-dirs-config.yml
+  vars:
+    directory_type: "static configuration directory"
+  loop:
+    - "conf.d"
+    - "default.d"
+
+- name: setup nginx main config files
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "{{ nginx_service_config_path }}/{{ item }}"
+    mode: '0644'
+    owner: root
+    group: root
+  loop:
+    - nginx.conf
+    - http.conf
+    - stream.conf
+    - static.conf
+  loop_control:
+    label: "{{ item }}"

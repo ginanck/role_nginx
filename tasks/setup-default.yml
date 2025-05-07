@@ -1,0 +1,9 @@
+---
+
+- name: Create default server configurations
+  ansible.builtin.template:
+    src: config/default.conf.j2
+    dest: "{{ nginx_service_config_path }}/conf.d/default.conf"
+    mode: '0644'
+    owner: root
+    group: root
