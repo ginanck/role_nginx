@@ -1,0 +1,39 @@
+---
+
+- name: Include SELinux variables
+  ansible.builtin.include_vars:
+    file: vars/selinux-{{ ansible_os_family }}.yml
+
+- name: Install SELinux management packages
+  ansible.builtin.package:
+    name: "{{ selinux_packages | default([]) }}"
+    state: present
+  ignore_errors: true
+
+- name: Install SELinux management packages
+  ansible.builtin.package:
+    name: "{{ selinux_packages | default([]) }}"
+    state: present
+  ignore_errors: true
+
+- name: Allow Nginx to bind to custom ports in SELinux
+  community.general.seport:
+    ports: "{{ item }}"
+    proto: tcp
+    setype: http_port_t
+    state: present
+  loop: "{{ nginx_selinux_ports }}"
+  register: selinux_port_result
+  failed_when: false
+
+- name: Apply SELinux port changes immediately (fallback method)
+  ansible.builtin.command: semanage port -a -t http_port_t -p tcp {{ item }}
+  loop: "{{ nginx_selinux_ports }}"
+  register: semanage_result
+  changed_when: semanage_result.rc == 0
+  failed_when: false
+  when: selinux_port_result is failed or selinux_port_result.results | selectattr('failed', 'true') | list | length > 0
+
+- name: Restore SELinux contexts
+  ansible.builtin.command: restorecon -Rv /etc/nginx
+  changed_when: false

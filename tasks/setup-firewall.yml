@@ -1,0 +1,17 @@
+---
+
+- name: Stop and disable firewalld service
+  ansible.builtin.systemd:
+    name: firewalld
+    state: stopped
+    enabled: false
+  ignore_errors: true
+  when: ansible_os_family == 'RedHat'
+
+- name: Stop and disable ufw service
+  ansible.builtin.systemd:
+    name: ufw
+    state: stopped
+    enabled: false
+  ignore_errors: true
+  when: ansible_os_family == 'Debian'

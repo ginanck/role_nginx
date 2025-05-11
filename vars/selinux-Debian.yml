@@ -1,0 +1,6 @@
+---
+
+selinux_packages:
+  - python3-selinux
+  - selinux-utils
+  - policycoreutils

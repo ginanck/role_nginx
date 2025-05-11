@@ -29,6 +29,14 @@ nginx_service_include_stream: true
 nginx_ssl_session_cache_http: "shared:HTTPSSLCache:10m"
 nginx_ssl_session_cache_stream: "shared:StreamSSLCache:10m"
 
+nginx_selinux_enabled: true
+nginx_selinux_ports:
+  - 80
+  - 443
+  - 6443
+
+nginx_firewall_disable: true
+
 nginx_sysctl_conf_file: "99-nginx.conf"
 nginx_sysctl_parameters:
   - name: net.ipv4.ip_forward
