@@ -31,3 +31,4 @@
   loop: "{{ nginx_static_file_servers | selectattr('enabled', 'equalto', true) }}"
   loop_control:
     label: "{{ item.name }}"
+  notify: reload nginx

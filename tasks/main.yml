@@ -7,12 +7,6 @@
     - nginx_sysctl_parameters is defined
     - nginx_sysctl_parameters is iterable
 
-- ansible.builtin.include_tasks: setup-selinux.yml
-  when: nginx_selinux_enabled | bool
-
-- include_tasks: setup-firewall.yml
-  when: nginx_firewall_disable | bool
-
 - include_tasks: setup-config.yml
 
 - include_tasks: setup-default.yml

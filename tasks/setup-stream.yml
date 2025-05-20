@@ -24,3 +24,4 @@
   loop: "{{ nginx_stream_loadbalancers | selectattr('enabled', 'equalto', true) }}"
   loop_control:
     label: "{{ item.name }}"
+  notify: reload nginx
