@@ -11,7 +11,7 @@ server {
 {% endif %}
 {% endfor %}
 
-    server_name  {{ item.server_name }};
+    server_name  {{ item.server_name | default('_') }};
     root         {{ item.root }};
     index        {{ item.index | default('index.html index.htm') }};
 

@@ -4,6 +4,5 @@
   ansible.builtin.apt:
     name: "{{ nginx_service_packages }}"
     state: present
-    update_cache: yes
-  notify: 
+  notify:
     - start nginx

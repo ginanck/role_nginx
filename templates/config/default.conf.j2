@@ -10,7 +10,7 @@ server {
     listen       {% if listen.ipv6 is defined and listen.ipv6 %}{{ listen.ipv6 }}:{% endif %}{{ listen.port }}  {% if listen.ssl is defined and listen.ssl %}ssl{% endif %} {% if listen.http2 is defined and listen.http2 %}http2{% endif %} {{ listen.name }};
 {% endif %}
 {% endfor %}
-    server_name  {{ server.server_name }};
+    server_name  {{ server.server_name | default('_') }};
     root         {{ server.root }};
 
 {% if server.tls is defined %}
