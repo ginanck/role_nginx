@@ -35,8 +35,6 @@ nginx_service_keepalive_timeout: 65
 nginx_service_types_hash_max_size: 2048
 nginx_service_include_mime_type: "{{ nginx_service_config_path }}/mime.types"
 nginx_service_default_type: application/octet-stream
-nginx_service_include_http: true
-nginx_service_include_stream: true
 
 nginx_ssl_session_cache_http: "shared:HTTPSSLCache:10m"
 nginx_ssl_session_cache_stream: "shared:StreamSSLCache:10m"

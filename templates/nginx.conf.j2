@@ -17,12 +17,12 @@ events {
     worker_connections {{ nginx_service_worker_connections }};
 }
 
-{% if nginx_service_include_http %}
+{% if nginx_default_server or nginx_vhost_servers or nginx_static_file_servers or nginx_http_loadbalancers %}
 # Include HTTP configuration for Default Server/VHost and Static file servers
 include {{ nginx_service_config_path }}/http.conf;
 {% endif %}
 
-{% if nginx_service_include_stream %}
+{% if nginx_stream_loadbalancers %}
 # Include Stream configuration for TCP/UDP load balancers
 include {{ nginx_service_config_path }}/stream.conf;
 {% endif %}
