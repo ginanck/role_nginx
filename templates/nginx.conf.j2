@@ -5,7 +5,7 @@
 #   * Official English Documentation: http://nginx.org/en/docs/
 #   * Official Russian Documentation: http://nginx.org/ru/docs/
 
-user                {{ nginx_service_user }};
+user                {{ nginx_service_user | default('root') }};
 worker_processes    {{ nginx_service_worker_processes }};
 error_log           {{ nginx_service_error_log }};
 pid                 {{ nginx_service_pid }};

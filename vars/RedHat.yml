@@ -1,0 +1,5 @@
+---
+
+nginx_service_packages:
+  - nginx
+  - nginx-all-modules

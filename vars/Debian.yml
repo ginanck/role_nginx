@@ -1,0 +1,6 @@
+---
+
+nginx_service_packages:
+  - nginx
+  - nginx-full
+  - nginx-extras

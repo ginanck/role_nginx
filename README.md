@@ -14,10 +14,19 @@ This role installs and configures Nginx for various use cases including default 
 ### General Nginx Configuration
 
 ```yaml
+# for RedHat distros
 nginx_service_packages:
   - nginx
+  - nginx-all-modules
 
-nginx_service_user: nginx
+# for Debian distros
+nginx_service_packages:
+  - nginx
+  - nginx-full
+  - nginx-extras
+
+# Default user and service name
+nginx_service_user: nginx  # Default is 'root'
 nginx_service_name: nginx
 nginx_service_pid: /run/nginx.pid
 
