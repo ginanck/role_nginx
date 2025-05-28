@@ -1,6 +1,9 @@
 ---
 # Nginx installation and service configuration
 
+nginx_service_packages:
+  - nginx
+
 nginx_service_name: nginx
 nginx_service_pid: /run/nginx.pid
 
