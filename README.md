@@ -343,6 +343,7 @@ nginx_static_file_servers:
     server_name: "static.example.com"
     root: "/var/www/static"
     index: "index.html index.htm"
+    autoindex: true
     access_log: "/var/log/nginx/static_access.log"
     error_log: "/var/log/nginx/static_error.log"
     client_max_body_size: "10M"

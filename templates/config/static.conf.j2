@@ -15,6 +15,9 @@ server {
     root         {{ item.root }};
     index        {{ item.index | default('index.html index.htm') }};
 
+{% if item.autoindex is defined and item.autoindex %}
+    autoindex on;
+{% endif %}
 {% if item.access_log is defined %}
     access_log   {{ item.access_log }};
 {% endif %}
