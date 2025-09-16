@@ -1,19 +1,22 @@
 ---
 
-- name: start nginx
+- name: Start nginx
   ansible.builtin.service:
     name: nginx
     state: started
     enabled: yes
 
-- name: restart nginx
+- name: Restart nginx
   ansible.builtin.service:
     name: nginx
     state: restarted
     enabled: yes
 
-- name: reload nginx
+- name: Reload nginx
   ansible.builtin.service:
     name: nginx
     state: reloaded
     enabled: yes
+
+- name: Apply sysctl parameters
+  ansible.builtin.command: "sysctl -p /etc/sysctl.d/{{ nginx_sysctl_conf_file }}"

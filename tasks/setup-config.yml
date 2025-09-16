@@ -8,7 +8,7 @@
     - "conf.d"
     - "default.d"
 
-- name: setup nginx main config files
+- name: Setup nginx main config files
   ansible.builtin.template:
     src: "{{ item }}.j2"
     dest: "{{ nginx_service_config_path }}/{{ item }}"
