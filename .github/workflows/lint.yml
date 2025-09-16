@@ -1,0 +1,81 @@
+---
+name: lint
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the codebase
+        uses: actions/checkout@v4
+
+      - name: Check out hooks repository
+        uses: actions/checkout@v4
+        with:
+          repository: 'ginanck/hooks_molecule'
+          ref: 'master'
+          path: hooks_molecule
+          token: '${{ secrets.HOOKS_TOKEN }}'
+
+      - name: Set up Python 3.9.23
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9.23'
+
+      - name: Install test dependencies from hooks repository
+        run: |
+          # Check if hooks repository has requirements file
+          if [ -f "hooks_molecule/requirements.txt" ]; then
+            echo "Installing dependencies from hooks_molecule/requirements.txt"
+            pip3 install -r hooks_molecule/requirements.txt
+          else
+            echo "No requirements.txt found in hooks repository, installing default dependencies"
+            pip3 install ansible ansible-lint yamllint flake8 molecule[docker] docker
+          fi
+
+      - name: ansible-lint
+        run: |
+          # Check for local ansible-lint config first, then fallback to hooks
+          if [ -f ".ansible-lint" ]; then
+            echo "Using local .ansible-lint configuration"
+            ansible-lint .
+          elif [ -f "hooks_molecule/ansible-lint.conf" ]; then
+            echo "Using external ansible-lint configuration"
+            ansible-lint -c hooks_molecule/ansible-lint.conf .
+          else
+            echo "No configuration found, running with defaults"
+            ansible-lint .
+          fi
+
+      - name: yamllint
+        run: |
+          # Check for local yamllint config first, then fallback to hooks
+          if [ -f ".yamllint" ] || [ -f ".yamllint.yml" ] || [ -f ".yamllint.yaml" ]; then
+            echo "Using local yamllint configuration"
+            yamllint .
+          elif [ -f "hooks_molecule/yamllint.conf" ]; then
+            echo "Using external yamllint configuration"
+            yamllint -c hooks_molecule/yamllint.conf .
+          else
+            echo "No configuration found, running with defaults"
+            yamllint .
+          fi
+
+      - name: flake8
+        run: |
+          # Check for local flake8 config first, then fallback to hooks
+          if [ -f ".flake8" ] || [ -f "setup.cfg" ]; then
+            echo "Using local flake8 configuration"
+            flake8 .
+          elif [ -f "hooks_molecule/flake8.conf" ]; then
+            echo "Using external flake8 configuration"
+            flake8 --config=hooks_molecule/flake8.conf .
+          else
+            echo "No configuration found, running with defaults"
+            flake8 .
+          fi
