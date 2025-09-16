@@ -1,6 +1,6 @@
 ---
 
-- name: "Create directory for {{ directory_type | default('www') }} - {{ item }}"
+- name: "Create directory - {{ directory_type | default('www') }} - {{ item }}"
   ansible.builtin.file:
     path: "{{ nginx_service_root_path }}/{{ item }}"
     state: directory
