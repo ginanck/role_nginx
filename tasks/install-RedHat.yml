@@ -5,4 +5,4 @@
     name: "{{ nginx_service_packages }}"
     state: present
   notify:
-    - start nginx
+    - Start nginx
