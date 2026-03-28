@@ -1,17 +1,23 @@
 ---
 
-- name: Stop and disable firewalld service
+- name: Stop and Disable Firewalld Service
   ansible.builtin.systemd:
     name: firewalld
     state: stopped
     enabled: false
-  ignore_errors: true
+  register: firewalld_result
+  failed_when:
+    - firewalld_result is failed
+    - "'Could not find the requested service' not in (firewalld_result.msg | default(''))"
   when: ansible_os_family == 'RedHat'
 
-- name: Stop and disable ufw service
+- name: Stop and Disable UFW Service
   ansible.builtin.systemd:
     name: ufw
     state: stopped
     enabled: false
-  ignore_errors: true
+  register: ufw_result
+  failed_when:
+    - ufw_result is failed
+    - "'Could not find the requested service' not in (ufw_result.msg | default(''))"
   when: ansible_os_family == 'Debian'

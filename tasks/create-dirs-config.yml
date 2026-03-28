@@ -1,6 +1,6 @@
 ---
 
-- name: "Create {{ directory_type | default('nginx') }} directory - {{ item }}"
+- name: "Create Nginx Config Directory - {{ item }}"
   ansible.builtin.file:
     path: "{{ nginx_service_config_path }}/{{ item }}"
     state: directory

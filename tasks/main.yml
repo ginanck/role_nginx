@@ -2,33 +2,42 @@
 
 # - include_vars: "{{ ansible_os_family }}.yml"
 
-- include_tasks: "install-{{ ansible_os_family }}.yml"
+- name: Include OS-Specific Installation Tasks
+  ansible.builtin.include_tasks: "install-{{ ansible_os_family }}.yml"
 
-- include_tasks: setup-sysctl.yml
+- name: Configure Sysctl Parameters
+  ansible.builtin.include_tasks: setup-sysctl.yml
   when:
     - nginx_sysctl_parameters is defined
     - nginx_sysctl_parameters is iterable
 
-- include_tasks: setup-config.yml
+- name: Configure Nginx Settings
+  ansible.builtin.include_tasks: setup-config.yml
 
-- include_tasks: setup-default.yml
+- name: Configure Default Server
+  ansible.builtin.include_tasks: setup-default.yml
   when:
     - nginx_default_server is defined and nginx_default_server is iterable and nginx_default_server | selectattr('enabled', 'defined') | selectattr('enabled', 'equalto', true) | list | length > 0
 
-- include_tasks: setup-vhost.yml
+- name: Configure Virtual Host Servers
+  ansible.builtin.include_tasks: setup-vhost.yml
   when:
     - nginx_vhost_servers is defined and nginx_vhost_servers is iterable and nginx_vhost_servers | selectattr('enabled', 'defined') | selectattr('enabled', 'equalto', true) | list | length > 0
 
-- include_tasks: setup-static.yml
+- name: Configure Static File Servers
+  ansible.builtin.include_tasks: setup-static.yml
   when:
     - nginx_static_file_servers is defined and nginx_static_file_servers is iterable and nginx_static_file_servers | selectattr('enabled', 'defined') | selectattr('enabled', 'equalto', true) | list | length > 0
 
-- include_tasks: setup-http.yml
+- name: Configure HTTP Load Balancers
+  ansible.builtin.include_tasks: setup-http.yml
   when:
     - nginx_http_loadbalancers is defined and nginx_http_loadbalancers is iterable and nginx_http_loadbalancers | selectattr('enabled', 'defined') | selectattr('enabled', 'equalto', true) | list | length > 0
 
-- include_tasks: setup-stream.yml
+- name: Configure Stream Load Balancers
+  ansible.builtin.include_tasks: setup-stream.yml
   when:
     - nginx_stream_loadbalancers is defined and nginx_stream_loadbalancers is iterable and nginx_stream_loadbalancers | selectattr('enabled', 'defined') | selectattr('enabled', 'equalto', true) | list | length > 0
 
-- include_tasks: remove.yml
+- name: Remove Disabled Configurations
+  ansible.builtin.include_tasks: remove.yml

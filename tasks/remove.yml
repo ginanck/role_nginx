@@ -4,7 +4,7 @@
   ansible.builtin.file:
     path: "{{ nginx_service_config_path }}/conf.d/default.conf"
     state: absent
-  when: 
+  when:
     - nginx_default_server is defined
     - nginx_default_server is iterable
     - nginx_default_server | selectattr('enabled', 'equalto', true) | length == 0
