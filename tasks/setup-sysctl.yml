@@ -1,5 +1,13 @@
 ---
 
+- name: ensure sysctl.d directory exists
+  ansible.builtin.file:
+    path: /etc/sysctl.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
 - name: create sysctl configuration file for Nginx
   ansible.builtin.template:
     src: config/sysctl.conf.j2
