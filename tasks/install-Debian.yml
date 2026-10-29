@@ -1,8 +1,13 @@
 ---
 
-- name: Install Nginx package
+- name: Include the official nginx repository when requested
+  ansible.builtin.include_tasks: repo-Debian.yml
+
+- name: Install the nginx package
   ansible.builtin.apt:
-    name: "{{ nginx_service_packages }}"
+    name: "nginx{{ ('=' ~ nginx_version) if nginx_version | length > 0 else '' }}"
     state: present
+    update_cache: true
+    cache_valid_time: 3600
   notify:
     - start nginx

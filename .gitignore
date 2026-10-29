@@ -56,4 +56,7 @@ Thumbs.db
 .configs/
 
 # ansible-lint cache
-.ansible/
+.ansible/*
+
+# molecule dependency installs (roles/ and collections/ in one place)
+dependency/

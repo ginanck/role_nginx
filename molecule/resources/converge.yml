@@ -3,6 +3,19 @@
   hosts: all
   become: true
   vars:
+    nginx_acme_webroot: /var/www/acme
+    nginx_proxy_cache:
+      enabled: true
+      path: /var/cache/nginx/proxy
+      levels: "1:2"
+      keys_zone: proxy_cache
+      max_size: 1g
+      inactive: 60m
+    nginx_rate_limit_zones:
+      - name: api
+        key: $binary_remote_addr
+        size: 10m
+        rate: 10r/s
     nginx_vhost_servers:
       - name: molecule
         enabled: true
@@ -17,6 +30,7 @@
           ssl_certificate_key: /etc/nginx/certs/molecule.key
         locations:
           - path: /
+            proxy_cache: true
             config:
               - try_files $uri $uri/ =404;
     nginx_certificates:

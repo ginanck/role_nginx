@@ -1,0 +1,50 @@
+---
+
+- name: Read the live main configuration checksum
+  ansible.builtin.stat:
+    path: "{{ nginx_service_config_path }}/nginx.conf"
+    checksum_algorithm: sha1
+  register: nginx_live_checksum
+
+- name: Read the candidate main configuration checksum
+  ansible.builtin.stat:
+    path: "{{ nginx_candidate_config_path }}/nginx.conf"
+    checksum_algorithm: sha1
+  register: nginx_candidate_checksum
+
+- name: Create the configuration backup directory
+  ansible.builtin.file:
+    path: "{{ nginx_backup_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+  when:
+    - nginx_live_checksum.stat.exists
+    - nginx_live_checksum.stat.checksum | default('') != nginx_candidate_checksum.stat.checksum | default('')
+
+- name: Archive the configuration that is about to be replaced
+  community.general.archive:
+    path: "{{ nginx_service_config_path }}"
+    dest: "{{ nginx_backup_dir }}/nginx-config.{{ now(utc=true, fmt='%Y%m%dT%H%M%S') }}.tar.gz"
+    format: gz
+    mode: '0600'
+  when:
+    - nginx_live_checksum.stat.exists
+    - nginx_live_checksum.stat.checksum | default('') != nginx_candidate_checksum.stat.checksum | default('')
+
+- name: Prune expired configuration archives
+  ansible.builtin.find:
+    paths: "{{ nginx_backup_dir }}"
+    patterns: "nginx-config.*.tar.gz"
+    age: "{{ nginx_backup_retention_days }}d"
+    age_stamp: ctime
+  register: nginx_expired_backups
+
+- name: Remove expired configuration archives
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ nginx_expired_backups.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"

@@ -1,8 +1,11 @@
 ---
 
-- name: Install Nginx package
+- name: Include the official nginx repository when requested
+  ansible.builtin.include_tasks: repo-RedHat.yml
+
+- name: Install the nginx package
   ansible.builtin.package:
-    name: "{{ nginx_service_packages }}"
+    name: "{{ 'nginx-' ~ nginx_version if nginx_version | length > 0 else nginx_service_packages }}"
     state: present
   notify:
     - start nginx

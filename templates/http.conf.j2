@@ -21,6 +21,25 @@ http {
     default_type        {{ nginx_service_default_type }};
     server_tokens       {{ nginx_server_tokens | default('off') }};
 
+{% if nginx_rate_limit_zones | default([]) | length > 0 %}
+    # Rate limiting zones
+{% for zone in nginx_rate_limit_zones %}
+    limit_req_zone {{ zone.key }} zone={{ zone.name }}:{{ zone.size | default('10m') }} rate={{ zone.rate }};
+{% endfor %}
+{% endif %}
+
+{% if nginx_proxy_cache.enabled | default(false) | bool %}
+    proxy_cache_path {{ nginx_proxy_cache.path }} levels={{ nginx_proxy_cache.levels }} keys_zone={{ nginx_proxy_cache.keys_zone }}:{{ nginx_proxy_cache.keys_zone_size | default('10m') }} inactive={{ nginx_proxy_cache.inactive }} max_size={{ nginx_proxy_cache.max_size }};
+{% endif %}
+
+{% if nginx_gzip_enabled | default(true) | bool %}
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_proxied any;
+    gzip_types text/plain text/css application/json application/javascript application/xml image/svg+xml;
+{% endif %}
+
     # Default http server configurations
     include {{ nginx_service_config_path }}/conf.d/*.conf;
 

@@ -33,7 +33,7 @@ upstream {{ upstream.name }} {
 # Virtual Host Configuration for {{ item.name }}
 server {
 {% for listen in item.listen %}
-    listen       {% if listen.ip is defined and listen.ip %}{{ listen.ip }}:{% endif %}{{ listen.port }}{% if listen.ssl is defined and listen.ssl %} ssl{% endif %}{% if listen.http2 is defined and listen.http2 %} http2{% endif %}{% if listen.name is defined %} {{ listen.name }}{% endif %};
+    listen       {% if listen.ip is defined and listen.ip %}{{ listen.ip }}:{% endif %}{{ listen.port }}{% if listen.ssl is defined and listen.ssl %} ssl{% endif %}{% if listen.http2 is defined and listen.http2 %} http2{% endif %}{% if listen.quic | default(false) %} quic reuseport{% endif %}{% if listen.name is defined %} {{ listen.name }}{% endif %};
 {% if listen.ipv6 is defined and listen.ipv6 %}
     listen       {{ listen.ipv6 }}:{{ listen.port }}{% if listen.ssl is defined and listen.ssl %} ssl{% endif %}{% if listen.http2 is defined and listen.http2 %} http2{% endif %}{% if listen.name is defined %} {{ listen.name }}{% endif %};
 {% endif %}
@@ -62,6 +62,17 @@ server {
 {% if nginx_hsts_enabled | default(true) | bool and item.hsts | default(true) | bool %}
     add_header Strict-Transport-Security "max-age={{ nginx_hsts_max_age | default(31536000) }}; includeSubDomains" always;
 {% endif %}
+{% if nginx_ocsp_stapling | default(false) | bool %}
+    ssl_stapling on;
+    ssl_stapling_verify on;
+{% if nginx_ssl_trusted_certificate | length > 0 %}
+    ssl_trusted_certificate {{ nginx_ssl_trusted_certificate }};
+{% endif %}
+{% endif %}
+{% if nginx_ssl_dhparam | length > 0 %}
+    ssl_dhparam {{ nginx_ssl_dhparam }};
+{% endif %}
+    ssl_session_tickets {{ 'on' if nginx_ssl_session_tickets | default(true) | bool else 'off' }};
 {% if item.tls.ssl_session_cache is defined %}
     ssl_session_cache           {{ item.tls.ssl_session_cache }};
 {% endif %}
@@ -76,9 +87,27 @@ server {
 {% endif %}
 {% endif %}
 
+{% if nginx_acme_webroot | length > 0 %}
+    location ^~ /.well-known/acme-challenge/ {
+        root {{ nginx_acme_webroot }};
+        default_type text/plain;
+    }
+
+{% endif %}
+{% if item.auth_basic is defined and item.auth_basic | bool %}
+    auth_basic "{{ item.auth_realm | default('Restricted') }}";
+    auth_basic_user_file {{ item.auth_basic_file | default(nginx_htpasswd_file) }};
+{% endif %}
+
 {% if item.locations is defined %}
 {% for location in item.locations %}
     location {{ location.path }} {
+{% if location.limit_req is defined %}
+        limit_req zone={{ location.limit_req }}{% if location.limit_req_burst is defined %} burst={{ location.limit_req_burst }}{% endif %} nodelay;
+{% endif %}
+{% if (location.proxy_cache | default(nginx_proxy_cache.enabled | default(false))) | bool %}
+        proxy_cache {{ nginx_proxy_cache.keys_zone }};
+{% endif %}
 {% if location.proxy_pass is defined %}
     {% if location.proxy_pass.startswith('http://') or location.proxy_pass.startswith('https://') %}
         proxy_pass {{ location.proxy_pass }};

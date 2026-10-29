@@ -26,6 +26,45 @@ nginx_redirect_http: false
 # Certificate pairs to deploy: [{src: local/path.pem, dest: /etc/nginx/certs/site.pem}]
 nginx_certificates: []
 
+# Optional TLS extras
+nginx_ocsp_stapling: false
+nginx_ssl_dhparam: ""
+nginx_ssl_session_tickets: true
+nginx_ssl_trusted_certificate: ""
+
+# ACME http-01 challenge webroot (rendered as a location when set)
+nginx_acme_webroot: ""
+
+# Basic authentication file: [{name: user, password: secret}] rendered with htpasswd
+nginx_htpasswd_file: /etc/nginx/htpasswd
+nginx_htpasswd_users: []
+
+# Rate limiting zones: [{name: api, key: $binary_remote_addr, size: 10m, rate: 10r/s}]
+nginx_rate_limit_zones: []
+
+# Response compression and log rotation
+nginx_gzip_enabled: true
+nginx_logrotate_enabled: true
+
+# Package source and version pinning
+nginx_use_official_repo: false
+nginx_version: ""
+
+# Proxy cache (rendered in the http context when enabled)
+nginx_proxy_cache:
+  enabled: false
+  path: /var/cache/nginx/proxy
+  levels: "1:2"
+  keys_zone: proxy_cache
+  keys_zone_size: 10m
+  max_size: 1g
+  inactive: 60m
+
+# Configuration backup and restore
+nginx_backup_dir: /var/backups/nginx
+nginx_backup_retention_days: 30
+nginx_restore_archive: ""
+
 nginx_service_worker_processes: auto
 nginx_service_worker_connections: 1024
 nginx_service_worker_rlimit_nofile: 4096

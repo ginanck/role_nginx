@@ -1,0 +1,25 @@
+---
+
+- name: Validate the requested restore archive
+  ansible.builtin.assert:
+    that:
+      - nginx_restore_archive | length > 0
+      - nginx_restore_archive is file
+    fail_msg: "nginx_restore_archive must name an existing configuration archive"
+    quiet: true
+
+- name: Restore the configuration archive
+  ansible.builtin.unarchive:
+    src: "{{ nginx_restore_archive }}"
+    dest: "{{ nginx_service_config_path | dirname }}"
+    remote_src: true
+    owner: root
+    group: root
+    extra_opts:
+      - --strip-components=2
+  notify: reload nginx
+
+- name: Validate the restored configuration
+  ansible.builtin.command:
+    cmd: "nginx -t -c {{ nginx_service_config_path }}/nginx.conf"
+  changed_when: false

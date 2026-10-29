@@ -1,0 +1,24 @@
+---
+
+- name: Create the htpasswd file directory
+  ansible.builtin.file:
+    path: "{{ nginx_htpasswd_file | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0750'
+  when: nginx_htpasswd_users | length > 0
+
+- name: Create the htpasswd file with the declared users
+  community.general.htpasswd:
+    path: "{{ nginx_htpasswd_file }}"
+    name: "{{ item.name }}"
+    password: "{{ item.password }}"
+    owner: root
+    group: root
+    mode: '0640'
+    crypt_scheme: apr_md5_crypt
+  loop: "{{ nginx_htpasswd_users }}"
+  loop_control:
+    label: "{{ item.name }}"
+  no_log: true

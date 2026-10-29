@@ -96,8 +96,27 @@
   when:
     - nginx_stream_loadbalancers is defined and nginx_stream_loadbalancers is iterable and nginx_stream_loadbalancers | selectattr('enabled', 'defined') | selectattr('enabled', 'equalto', true) | list | length > 0
 
+- name: Create the proxy cache directory
+  ansible.builtin.file:
+    path: "{{ nginx_proxy_cache.path }}"
+    state: directory
+    owner: "{{ nginx_service_user }}"
+    group: root
+    mode: '0750'
+  when: nginx_proxy_cache.enabled | default(false) | bool
+
 - name: Deploy Declared Certificates
   ansible.builtin.include_tasks: setup-certs.yml
+
+- name: Configure Basic Authentication Files
+  ansible.builtin.include_tasks: setup-auth.yml
+
+- name: Configure Log Rotation
+  ansible.builtin.include_tasks: setup-logrotate.yml
+
+- name: Restore a configuration archive when requested
+  ansible.builtin.include_tasks: restore.yml
+  when: nginx_restore_archive | length > 0
 
 - name: Validate Candidate, Promote and Reload
   ansible.builtin.include_tasks: promote-config.yml

@@ -1,5 +1,8 @@
 ---
 
+- name: Back up the configuration that is about to be replaced
+  ansible.builtin.include_tasks: backup.yml
+
 - name: Validate the candidate configuration tree
   ansible.builtin.command:
     cmd: "nginx -t -c {{ nginx_candidate_config_path }}/nginx.conf"

@@ -62,6 +62,43 @@
           - deployed_cert.stat.mode == '0640'
         fail_msg: "declared certificates must be deployed with mode 0640"
 
+    - name: test_ac8_tls_extras_are_rendered
+      ansible.builtin.assert:
+        that:
+          - "'ssl_session_tickets' in (live_vhost.content | b64decode)"
+        fail_msg: "the vhost must render the TLS session ticket setting"
+
+    - name: test_ac9_acme_challenge_location
+      ansible.builtin.assert:
+        that:
+          - "'.well-known/acme-challenge/' in (live_vhost.content | b64decode)"
+        fail_msg: "the ACME challenge location must be rendered"
+
+    - name: test_ac11_rate_limit_zone_and_gzip
+      ansible.builtin.assert:
+        that:
+          - "'limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;' in (live_http.content | b64decode)"
+          - "'gzip on;' in (live_http.content | b64decode)"
+        fail_msg: "declared rate limit zones and gzip must be rendered"
+
+    - name: test_ac13_proxy_cache_is_rendered
+      ansible.builtin.assert:
+        that:
+          - "'proxy_cache_path /var/cache/nginx/proxy' in (live_http.content | b64decode)"
+          - "'proxy_cache proxy_cache;' in (live_vhost.content | b64decode)"
+        fail_msg: "the proxy cache path and location reference must be rendered"
+
+    - name: test_ac11_logrotate_policy
+      ansible.builtin.stat:
+        path: /etc/logrotate.d/nginx
+      register: nginx_logrotate
+
+    - name: test_ac11_assert_logrotate_policy
+      ansible.builtin.assert:
+        that:
+          - nginx_logrotate.stat.exists
+        fail_msg: "the log rotation policy must be installed"
+
     - name: test_ac3_service_is_running
       ansible.builtin.command:
         cmd: systemctl is-active nginx

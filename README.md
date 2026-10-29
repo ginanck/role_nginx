@@ -1149,3 +1149,35 @@ This role has been developed by gkorkmaz
   HTTPS on `redirect_port` (80 by default).
 - `nginx_certificates` deploys declared certificate pairs with mode `0640`; add `remote_src: true`
   when the source already exists on the target host.
+
+## Operational options
+
+- TLS extras: `nginx_ocsp_stapling`, `nginx_ssl_trusted_certificate`, `nginx_ssl_dhparam`,
+  `nginx_ssl_session_tickets`.
+- `nginx_acme_webroot` renders a `/.well-known/acme-challenge/` location for HTTP-01 validation.
+- `nginx_htpasswd_file` and `nginx_htpasswd_users` create a password file with mode `0640`; a vhost
+  enables authentication with `auth_basic: true`.
+- `nginx_rate_limit_zones` renders `limit_req_zone` definitions; a location uses one with
+  `limit_req: <zone>`. `nginx_gzip_enabled` renders the compression block.
+- `nginx_logrotate_enabled` installs `/etc/logrotate.d/nginx`.
+- `nginx_use_official_repo` and `nginx_version` select and pin the package source.
+- `nginx_proxy_cache` renders a `proxy_cache_path` and a location can opt in with
+  `proxy_cache: true`.
+- A listener with `quic: true` renders `quic reuseport`; the nginx build must include the QUIC module.
+- `nginx_backup_dir` keeps timestamped archives of the configuration tree before a change is
+  promoted; set `nginx_restore_archive` to restore one with validation.
+
+## Molecule scenarios
+
+- `default` and `rockylinux-9` run on the Rocky Linux 9 image; `rockylinux-8` targets Rocky Linux 8.
+- Run them with the mitogen strategy disabled, otherwise Ansible hangs against the local Docker socket:
+
+  ```sh
+  env -u ANSIBLE_STRATEGY -u ANSIBLE_STRATEGY_PLUGINS molecule test
+  env -u ANSIBLE_STRATEGY -u ANSIBLE_STRATEGY_PLUGINS molecule test -s rockylinux-8
+  ```
+
+- The Rocky Linux 8 image ships Python 3.6 only; ansible-core 2.21 cannot execute modules on a
+  3.6 target, so the `rockylinux-8` scenario needs an image with Python 3.8 or newer.
+- The role dependencies are taken from the checked-out `../role_base` sibling, so local changes to
+  the base role are exercised by the scenarios.
