@@ -1,63 +1,75 @@
 ---
 - name: Verify
   hosts: all
-  gather_facts: false
   become: true
+  gather_facts: true
   tasks:
-    - name: Check Gitea Binary Exists
-      ansible.builtin.stat:
-        path: /usr/local/bin/gitea
-      register: gitea_binary
-
-    - name: Assert Gitea Binary Is Present
-      ansible.builtin.assert:
-        that:
-          - gitea_binary.stat.exists
-          - gitea_binary.stat.islnk
-        fail_msg: "Gitea binary not found at /usr/local/bin/gitea"
-
-    - name: Check Gitea Configuration Exists
-      ansible.builtin.stat:
-        path: /etc/gitea/app.ini
-      register: gitea_config
-
-    - name: Assert Gitea Configuration Is Present
-      ansible.builtin.assert:
-        that:
-          - gitea_config.stat.exists
-        fail_msg: "Gitea configuration not found at /etc/gitea/app.ini"
-
-    - name: Check Gitea Service Is Running
-      ansible.builtin.command: systemctl is-active gitea
-      register: gitea_service_status
+    - name: test_ac1_live_configuration_is_valid
+      ansible.builtin.command:
+        cmd: nginx -t -c /etc/nginx/nginx.conf
       changed_when: false
-      failed_when: false
+      register: nginx_syntax
 
-    - name: Assert Gitea Service Is Active
+    - name: test_ac2_promoted_config_matches_candidate
+      ansible.builtin.slurp:
+        src: /etc/nginx/vhost.d/vhost_molecule.conf
+      register: live_vhost
+
+    - name: test_ac2_candidate_config
+      ansible.builtin.slurp:
+        src: /var/lib/nginx/candidate/vhost.d/vhost_molecule.conf
+      register: candidate_vhost
+
+    - name: test_ac2_assert_promoted_equals_candidate
       ansible.builtin.assert:
         that:
-          - gitea_service_status.rc == 0
-        fail_msg: "Gitea service is not active"
+          - live_vhost.content == candidate_vhost.content
+        fail_msg: "the live vhost must equal the validated candidate"
 
-    - name: Check Gitea User Exists
-      ansible.builtin.command: id gitea
-      register: gitea_user_check
-      changed_when: false
-
-    - name: Assert Gitea User Exists
+    - name: test_ac4_tls_protocols_are_declared
       ansible.builtin.assert:
         that:
-          - gitea_user_check.rc == 0
-        fail_msg: "Gitea system user does not exist"
+          - "'ssl_protocols' in (live_vhost.content | b64decode)"
+        fail_msg: "the vhost must declare an explicit TLS protocol set"
 
-    - name: Check Gitea Data Directory Exists
+    - name: test_ac5_redirect_and_hsts_are_declared
+      ansible.builtin.assert:
+        that:
+          - "'return       301 https://$host$request_uri;' in (live_vhost.content | b64decode)"
+          - "'Strict-Transport-Security' in (live_vhost.content | b64decode)"
+        fail_msg: "the vhost must redirect to HTTPS and send HSTS"
+
+    - name: test_ac6_server_tokens_is_off
+      ansible.builtin.slurp:
+        src: /etc/nginx/http.conf
+      register: live_http
+
+    - name: test_ac6_assert_server_tokens
+      ansible.builtin.assert:
+        that:
+          - "'server_tokens       off;' in (live_http.content | b64decode)"
+        fail_msg: "server_tokens must be off"
+
+    - name: test_ac7_certificate_mode
       ansible.builtin.stat:
-        path: /var/lib/gitea
-      register: gitea_data_dir
+        path: /etc/nginx/certs/deployed.crt
+      register: deployed_cert
 
-    - name: Assert Gitea Data Directory Is Present
+    - name: test_ac7_assert_certificate_mode
       ansible.builtin.assert:
         that:
-          - gitea_data_dir.stat.exists
-          - gitea_data_dir.stat.isdir
-        fail_msg: "Gitea data directory not found at /var/lib/gitea"
+          - deployed_cert.stat.exists
+          - deployed_cert.stat.mode == '0640'
+        fail_msg: "declared certificates must be deployed with mode 0640"
+
+    - name: test_ac3_service_is_running
+      ansible.builtin.command:
+        cmd: systemctl is-active nginx
+      changed_when: false
+      register: nginx_active
+
+    - name: test_ac3_assert_service_state
+      ansible.builtin.assert:
+        that:
+          - nginx_active.stdout | trim == 'active'
+        fail_msg: "nginx must be running"

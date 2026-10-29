@@ -1,6 +1,7 @@
 ---
 
-# - include_vars: "{{ ansible_os_family }}.yml"
+- name: Load OS-Specific Variables
+  ansible.builtin.include_vars: "{{ ansible_os_family }}.yml"
 
 - name: Include OS-Specific Installation Tasks
   ansible.builtin.include_tasks: "install-{{ ansible_os_family }}.yml"
@@ -11,33 +12,95 @@
     - nginx_sysctl_parameters is defined
     - nginx_sysctl_parameters is iterable
 
-- name: Configure Nginx Settings
-  ansible.builtin.include_tasks: setup-config.yml
+- name: Disable Conflicting Firewall Services
+  ansible.builtin.include_tasks: setup-firewall.yml
+  when: nginx_firewall_disable | default(false) | bool
 
-- name: Configure Default Server
+- name: Configure SELinux for Custom Ports
+  ansible.builtin.include_tasks: setup-selinux.yml
+  when:
+    - nginx_selinux_enabled | default(true) | bool
+    - ansible_selinux.status | default('disabled') == 'enabled'
+
+- name: Create Live Configuration Directories
+  ansible.builtin.include_tasks: create-dirs-config.yml
+  vars:
+    directory_type: "live configuration directory"
+  loop:
+    - "conf.d"
+    - "default.d"
+    - "vhost.d"
+    - "stream.d"
+    - "http.d"
+    - "static.d"
+
+- name: Create Candidate Configuration Root
+  ansible.builtin.file:
+    path: "{{ nginx_candidate_config_path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Seed the Candidate Tree with Shared Static Files
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ nginx_candidate_config_path }}/{{ item | basename }}"
+    remote_src: true
+    owner: root
+    group: root
+    mode: '0644'
+  loop:
+    - "{{ nginx_service_include_mime_type }}"
+  failed_when: false
+
+# Every template below is rendered into the candidate tree, whose includes point at
+# the candidate tree, so the whole result can be validated before it goes live.
+- name: Configure Nginx Settings (candidate)
+  ansible.builtin.include_tasks: setup-config.yml
+  vars:
+    nginx_service_config_path: "{{ nginx_candidate_config_path }}"
+
+- name: Configure Default Server (candidate)
   ansible.builtin.include_tasks: setup-default.yml
+  vars:
+    nginx_service_config_path: "{{ nginx_candidate_config_path }}"
   when:
     - nginx_default_server is defined and nginx_default_server is iterable and nginx_default_server | selectattr('enabled', 'defined') | selectattr('enabled', 'equalto', true) | list | length > 0
 
-- name: Configure Virtual Host Servers
+- name: Configure Virtual Host Servers (candidate)
   ansible.builtin.include_tasks: setup-vhost.yml
+  vars:
+    nginx_service_config_path: "{{ nginx_candidate_config_path }}"
   when:
     - nginx_vhost_servers is defined and nginx_vhost_servers is iterable and nginx_vhost_servers | selectattr('enabled', 'defined') | selectattr('enabled', 'equalto', true) | list | length > 0
 
-- name: Configure Static File Servers
+- name: Configure Static File Servers (candidate)
   ansible.builtin.include_tasks: setup-static.yml
+  vars:
+    nginx_service_config_path: "{{ nginx_candidate_config_path }}"
   when:
     - nginx_static_file_servers is defined and nginx_static_file_servers is iterable and nginx_static_file_servers | selectattr('enabled', 'defined') | selectattr('enabled', 'equalto', true) | list | length > 0
 
-- name: Configure HTTP Load Balancers
+- name: Configure HTTP Load Balancers (candidate)
   ansible.builtin.include_tasks: setup-http.yml
+  vars:
+    nginx_service_config_path: "{{ nginx_candidate_config_path }}"
   when:
     - nginx_http_loadbalancers is defined and nginx_http_loadbalancers is iterable and nginx_http_loadbalancers | selectattr('enabled', 'defined') | selectattr('enabled', 'equalto', true) | list | length > 0
 
-- name: Configure Stream Load Balancers
+- name: Configure Stream Load Balancers (candidate)
   ansible.builtin.include_tasks: setup-stream.yml
+  vars:
+    nginx_service_config_path: "{{ nginx_candidate_config_path }}"
   when:
     - nginx_stream_loadbalancers is defined and nginx_stream_loadbalancers is iterable and nginx_stream_loadbalancers | selectattr('enabled', 'defined') | selectattr('enabled', 'equalto', true) | list | length > 0
+
+- name: Deploy Declared Certificates
+  ansible.builtin.include_tasks: setup-certs.yml
+
+- name: Validate Candidate, Promote and Reload
+  ansible.builtin.include_tasks: promote-config.yml
 
 - name: Remove Disabled Configurations
   ansible.builtin.include_tasks: remove.yml

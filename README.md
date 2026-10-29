@@ -1135,3 +1135,17 @@ This role has been developed by gkorkmaz
 ---
 
 *This role is actively maintained and tested across multiple platforms. For the latest updates and features, please refer to the official repository.*
+
+## Candidate validation and TLS hardening
+
+- Each run renders the complete configuration into `nginx_candidate_config_path`
+  (`/var/lib/nginx/candidate` by default), whose include directives point at the candidate tree.
+  The tree is validated with `nginx -t -c <candidate>/nginx.conf` and only then promoted to the
+  live paths; an invalid candidate never replaces the live configuration.
+- `nginx_ssl_protocols`, `nginx_ssl_ciphers`, `nginx_hsts_enabled`, `nginx_hsts_max_age` and
+  `nginx_server_tokens` control TLS and response hardening. A vhost can override them through
+  its `tls` block or `hsts`.
+- Set `redirect_http: true` on a vhost to render a plain HTTP server that answers with a 301 to
+  HTTPS on `redirect_port` (80 by default).
+- `nginx_certificates` deploys declared certificate pairs with mode `0640`; add `remote_src: true`
+  when the source already exists on the target host.

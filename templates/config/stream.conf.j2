@@ -30,7 +30,7 @@ server {
 {% endif %}
 {% endfor %}
 
-{% if item.ssl is defined %}
+{% if item.tls is defined %}
     ssl_certificate {{ item.tls.ssl_certificate }};
     ssl_certificate_key {{ item.tls.ssl_certificate_key }};
 {% if item.tls.ssl_session_cache is defined %}

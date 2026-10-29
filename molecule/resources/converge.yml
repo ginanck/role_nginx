@@ -2,5 +2,36 @@
 - name: Converge
   hosts: all
   become: true
+  vars:
+    nginx_vhost_servers:
+      - name: molecule
+        enabled: true
+        server_name: molecule.local
+        root: /usr/share/nginx/html
+        redirect_http: true
+        listen:
+          - port: 443
+            ssl: true
+        tls:
+          ssl_certificate: /etc/nginx/certs/molecule.crt
+          ssl_certificate_key: /etc/nginx/certs/molecule.key
+        locations:
+          - path: /
+            config:
+              - try_files $uri $uri/ =404;
+    nginx_certificates:
+      - src: /etc/nginx/certs/molecule.crt
+        dest: /etc/nginx/certs/deployed.crt
+        remote_src: true
+      - src: /etc/nginx/certs/molecule.key
+        dest: /etc/nginx/certs/deployed.key
+        remote_src: true
+    nginx_stream_loadbalancers:
+      - name: molecule-tcp
+        enabled: true
+        listen:
+          - port: 9000
+        upstream_servers:
+          - address: 127.0.0.1:8000
   roles:
     - role_nginx

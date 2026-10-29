@@ -1,0 +1,25 @@
+---
+
+- name: Create declared certificate directories
+  ansible.builtin.file:
+    path: "{{ item.dest | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  loop: "{{ nginx_certificates }}"
+  loop_control:
+    label: "{{ item.dest | dirname }}"
+
+- name: Deploy declared certificate files
+  ansible.builtin.copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    remote_src: "{{ item.remote_src | default(false) }}"
+    owner: root
+    group: root
+    mode: '0640'
+  loop: "{{ nginx_certificates }}"
+  loop_control:
+    label: "{{ item.dest }}"
+  no_log: true

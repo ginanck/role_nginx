@@ -48,3 +48,54 @@
     label: "{{ item.name }}"
   when:
     - nginx_stream_loadbalancers is defined and nginx_stream_loadbalancers is iterable and nginx_stream_loadbalancers | selectattr('enabled', 'equalto', false)
+
+# The candidate tree persists between runs, so disabled configurations must be
+# removed there too; otherwise they would be promoted back on the next run.
+- name: Cleanup the candidate default configuration
+  ansible.builtin.file:
+    path: "{{ nginx_candidate_config_path }}/conf.d/default.conf"
+    state: absent
+  when:
+    - nginx_default_server is defined
+    - nginx_default_server is iterable
+    - nginx_default_server | selectattr('enabled', 'equalto', true) | length == 0
+
+- name: Cleanup candidate vhost configurations
+  ansible.builtin.file:
+    path: "{{ nginx_candidate_config_path }}/vhost.d/vhost_{{ item.name }}.conf"
+    state: absent
+  loop: "{{ nginx_vhost_servers | selectattr('enabled', 'equalto', false) | list }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when:
+    - nginx_vhost_servers is defined and nginx_vhost_servers is iterable
+
+- name: Cleanup candidate static configurations
+  ansible.builtin.file:
+    path: "{{ nginx_candidate_config_path }}/static.d/static_{{ item.name }}.conf"
+    state: absent
+  loop: "{{ nginx_static_file_servers | selectattr('enabled', 'equalto', false) | list }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when:
+    - nginx_static_file_servers is defined and nginx_static_file_servers is iterable
+
+- name: Cleanup candidate http configurations
+  ansible.builtin.file:
+    path: "{{ nginx_candidate_config_path }}/http.d/http_{{ item.name }}.conf"
+    state: absent
+  loop: "{{ nginx_http_loadbalancers | selectattr('enabled', 'equalto', false) | list }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when:
+    - nginx_http_loadbalancers is defined and nginx_http_loadbalancers is iterable
+
+- name: Cleanup candidate stream configurations
+  ansible.builtin.file:
+    path: "{{ nginx_candidate_config_path }}/stream.d/stream_{{ item.name }}.conf"
+    state: absent
+  loop: "{{ nginx_stream_loadbalancers | selectattr('enabled', 'equalto', false) | list }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when:
+    - nginx_stream_loadbalancers is defined and nginx_stream_loadbalancers is iterable

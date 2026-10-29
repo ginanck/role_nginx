@@ -1,4 +1,6 @@
 ---
 
+nginx_service_user: www-data
+nginx_service_modules_glob: /etc/nginx/modules-enabled/*.conf
 nginx_service_packages:
   - nginx

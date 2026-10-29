@@ -1,5 +1,7 @@
 ---
 
+nginx_service_user: nginx
+nginx_service_modules_glob: /usr/share/nginx/modules/*.conf
 nginx_service_packages:
   - nginx
   - nginx-all-modules

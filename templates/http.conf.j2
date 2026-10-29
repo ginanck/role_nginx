@@ -19,6 +19,7 @@ http {
     types_hash_max_size {{ nginx_service_types_hash_max_size }};
     include             {{ nginx_service_include_mime_type }};
     default_type        {{ nginx_service_default_type }};
+    server_tokens       {{ nginx_server_tokens | default('off') }};
 
     # Default http server configurations
     include {{ nginx_service_config_path }}/conf.d/*.conf;

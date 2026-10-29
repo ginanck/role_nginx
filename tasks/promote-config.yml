@@ -1,0 +1,44 @@
+---
+
+- name: Validate the candidate configuration tree
+  ansible.builtin.command:
+    cmd: "nginx -t -c {{ nginx_candidate_config_path }}/nginx.conf"
+  changed_when: false
+
+- name: Find candidate directories
+  ansible.builtin.find:
+    paths: "{{ nginx_candidate_config_path }}"
+    file_type: directory
+    recurse: true
+  register: nginx_candidate_dirs
+
+- name: Create matching live directories
+  ansible.builtin.file:
+    path: "{{ item.path | replace(nginx_candidate_config_path, nginx_service_config_path) }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  loop: "{{ nginx_candidate_dirs.files }}"
+  loop_control:
+    label: "{{ item.path | relpath(nginx_candidate_config_path) }}"
+
+- name: Find candidate configuration files
+  ansible.builtin.find:
+    paths: "{{ nginx_candidate_config_path }}"
+    file_type: file
+    recurse: true
+  register: nginx_candidate_files
+
+- name: Promote validated configuration files
+  ansible.builtin.copy:
+    src: "{{ item.path }}"
+    dest: "{{ item.path | replace(nginx_candidate_config_path, nginx_service_config_path) }}"
+    remote_src: true
+    owner: root
+    group: root
+    mode: '0644'
+  loop: "{{ nginx_candidate_files.files }}"
+  loop_control:
+    label: "{{ item.path | relpath(nginx_candidate_config_path) }}"
+  notify: reload nginx

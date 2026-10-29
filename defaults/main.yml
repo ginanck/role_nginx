@@ -8,8 +8,23 @@ nginx_service_name: nginx
 nginx_service_pid: /run/nginx.pid
 
 nginx_service_config_path: /etc/nginx
+nginx_service_modules_glob: /usr/share/nginx/modules/*.conf
 nginx_service_root_path: /var/www/html
 nginx_service_ssl_path: /opt/nginx/ssl
+
+# Candidate configuration tree rendered and validated before it replaces the live tree
+nginx_candidate_config_path: /var/lib/nginx/candidate
+
+# TLS and response hardening (per vhost overrides win)
+nginx_ssl_protocols: "TLSv1.2 TLSv1.3"
+nginx_ssl_ciphers: "HIGH:!aNULL:!MD5"
+nginx_server_tokens: "off"
+nginx_hsts_enabled: true
+nginx_hsts_max_age: 31536000
+nginx_redirect_http: false
+
+# Certificate pairs to deploy: [{src: local/path.pem, dest: /etc/nginx/certs/site.pem}]
+nginx_certificates: []
 
 nginx_service_worker_processes: auto
 nginx_service_worker_connections: 1024
@@ -33,7 +48,7 @@ nginx_selinux_ports:
   - 443
   - 6443
 
-nginx_firewall_disable: true
+nginx_firewall_disable: false
 
 nginx_sysctl_conf_file: "99-nginx.conf"
 nginx_sysctl_parameters:

@@ -1,7 +1,7 @@
 ---
 
 - name: Install Nginx package
-  ansible.builtin.yum:
+  ansible.builtin.package:
     name: "{{ nginx_service_packages }}"
     state: present
   notify:

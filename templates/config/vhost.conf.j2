@@ -2,6 +2,16 @@
 # {{ ansible_managed }}
 
 {% if item.enabled %}
+{% set _has_ssl = item.listen | selectattr('ssl', 'defined') | selectattr('ssl') | list | length > 0 %}
+{% if _has_ssl and (item.redirect_http | default(nginx_redirect_http)) %}
+# Plain HTTP redirect for {{ item.name }}
+server {
+    listen       {{ item.redirect_port | default(80) }};
+    server_name  {{ item.server_name | default('_') }};
+    return       301 https://$host$request_uri;
+}
+
+{% endif %}
 {% if item.resolver is defined %}
 resolver {{ item.resolver }};
 {% endif %}
@@ -46,14 +56,20 @@ server {
     # SSL/TLS Configuration
     ssl_certificate             {{ item.tls.ssl_certificate }};
     ssl_certificate_key         {{ item.tls.ssl_certificate_key }};
+{% if item.tls.ssl_protocols is defined or nginx_ssl_protocols is defined %}
+    ssl_protocols               {{ item.tls.ssl_protocols | default(nginx_ssl_protocols) }};
+{% endif %}
+{% if nginx_hsts_enabled | default(true) | bool and item.hsts | default(true) | bool %}
+    add_header Strict-Transport-Security "max-age={{ nginx_hsts_max_age | default(31536000) }}; includeSubDomains" always;
+{% endif %}
 {% if item.tls.ssl_session_cache is defined %}
     ssl_session_cache           {{ item.tls.ssl_session_cache }};
 {% endif %}
 {% if item.tls.ssl_session_timeout is defined %}
     ssl_session_timeout         {{ item.tls.ssl_session_timeout }};
 {% endif %}
-{% if item.tls.ssl_ciphers is defined %}
-    ssl_ciphers                 {{ item.tls.ssl_ciphers }};
+{% if item.tls.ssl_ciphers is defined or nginx_ssl_ciphers is defined %}
+    ssl_ciphers                 {{ item.tls.ssl_ciphers | default(nginx_ssl_ciphers) }};
 {% endif %}
 {% if item.tls.ssl_prefer_server_ciphers is defined %}
     ssl_prefer_server_ciphers   {{ item.tls.ssl_prefer_server_ciphers }};
